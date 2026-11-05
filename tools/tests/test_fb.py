@@ -96,6 +96,8 @@ async def main():
           await P.Data.set('mauh/h1',{code:'CAT_XD',rev:1});await new Promise(r=>setTimeout(r,200));
           return {c1,c2,g,mauh:(P.S.mauh||[]).length,denied:globalThis.__FAKE.denied};}""")
         print('2d ghi/đọc nhân viên:',json.dumps(r,ensure_ascii=False))
+        r=await page.evaluate("async()=>{const r=await window.__ptn.bkupRun({full:false},()=>{});return {ndoc:r.ndoc,sheets:r.sheets.length,kb:Math.round(r.bytes.length/1024),warn:r.warn,denied:globalThis.__FAKE.denied}}")
+        print('2d2 xuất Excel qua Firebase (nhân viên):',r)
         # đổi mật khẩu
         await page.click('.side .me button:has-text("Đổi mật khẩu")');await page.wait_for_selector('#fb-o')
         await page.fill('#fb-o','sai');await page.fill('#fb-n','matkhau-moi1');await page.fill('#fb-n2','matkhau-moi1');await page.click('.modal button[type=submit]')

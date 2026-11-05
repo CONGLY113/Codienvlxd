@@ -1,6 +1,6 @@
 # Triển khai web app lên Firebase
 
-Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.23.0) trên Firebase Hosting, lưu dữ liệu dùng chung bằng Cloud Firestore, đăng nhập bằng Firebase Authentication. Web app tự nhận ra có Firebase (nhờ `public/fb-shim.js`) và chuyển sang đăng nhập bằng mật khẩu; không có Firebase thì vẫn chạy chế độ chọn tên như cũ.
+Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.24.0) trên Firebase Hosting, lưu dữ liệu dùng chung bằng Cloud Firestore, đăng nhập bằng Firebase Authentication. Web app tự nhận ra có Firebase (nhờ `public/fb-shim.js`) và chuyển sang đăng nhập bằng mật khẩu; không có Firebase thì vẫn chạy chế độ chọn tên như cũ.
 
 ## Gói gồm
 
@@ -57,6 +57,15 @@ firebase deploy
 Lệnh đẩy cả trang web (Hosting) và luật bảo mật (Firestore rules). Kết thúc sẽ hiện địa chỉ dạng `https://<project-id>.web.app`. Gửi địa chỉ này cho cán bộ.
 
 **7. Sau khi vào được.** Chọn tên Hoàng Công Lý, nhập mật khẩu đã tạo cho `hcly113@gmail.com`, vào Cài đặt, mục "Link web app", dán địa chỉ `.web.app` (để mã QR tra cứu trên phiếu trỏ đúng). Nhập lại đơn giá, thông tin ngân hàng ở các mục tương ứng nếu chạy mới hoàn toàn.
+
+## Sao lưu dữ liệu ra Excel
+
+Vào **Cài đặt** (tài khoản trưởng phòng), mục **Sao lưu dữ liệu ra Excel**, bấm **Xuất toàn bộ dữ liệu ra Excel**. File `PTN_SaoLuu_<ngày>_<giờ>.xlsx` gồm các sheet đọc được (Mau, Ket_qua, So_lieu_goc, Bang_ke, Bang_ke_dong, Nhat_ky, Thiet_bi, Cau_hinh, Bieu_mau_lich_su, Luu_giu_chi_muc, Bo_dem_so, Loi_he_thong), sheet `Doc_toi` giải thích và sheet `DuLieu_Tho` chứa nguyên văn từng tài liệu (JSON, cắt phần 30.000 ký tự mỗi ô) để khôi phục hoặc đối chiếu.
+
+- Nên sao lưu mỗi tuần một lần, cất file vào Google Drive của phòng hoặc ổ cứng ngoài. Web app nhắc trên trang Tổng quan khi quá 7 ngày chưa sao lưu.
+- Mặc định bỏ các file nhị phân (file Excel cán bộ đã nộp, phiếu lưu bản cũ, bản biểu mẫu tùy chỉnh) để file nhẹ và đỡ tốn lượt đọc. Tick "Kèm cả nội dung file Excel đã nộp" nếu cần.
+- Mỗi lần xuất đọc toàn bộ tài liệu đang trực tuyến: mỗi tài liệu tính một lượt đọc trong hạn mức 50.000 lượt mỗi ngày của gói Spark. Phòng vài nghìn tài liệu dùng không đáng kể. Dữ liệu cũ đã chuyển lưu giữ nằm trong các file ZIP lưu giữ, không nằm trong file Excel này.
+- File chứa thông tin khách hàng và công trình: bảo quản kín.
 
 ## Cập nhật phiên bản mới
 
