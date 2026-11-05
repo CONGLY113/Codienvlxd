@@ -110,7 +110,7 @@ button{font-family:inherit}
 .field label{font-weight:600;font-size:12.5px}
 .field .hint{font-size:12px;color:var(--ink-2)}
 .req{color:var(--bad)}
-input[type=text],input[type=email],input[type=tel],input[type=date],input[type=number],select,textarea{
+input[type=password],input[type=text],input[type=email],input[type=tel],input[type=date],input[type=number],select,textarea{
   width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:38px}
 textarea{min-height:70px;resize:vertical}
 input:disabled,select:disabled{background:var(--surface-2);color:var(--ink-2)}
@@ -345,7 +345,7 @@ td.r,th.r{text-align:right}
   .page-head>.row .btn{flex:1}
   .card{padding:14px}
   /* điều khiển cỡ ngón tay; 16px để iOS không tự phóng to khi chạm vào ô nhập */
-  input[type=text],input[type=email],input[type=tel],input[type=date],input[type=number],input[type=search],input[type=month],select,textarea{font-size:16px;min-height:46px;padding:10px 12px}
+  input[type=password],input[type=text],input[type=email],input[type=tel],input[type=date],input[type=number],input[type=search],input[type=month],select,textarea{font-size:16px;min-height:46px;padding:10px 12px}
   .btn{min-height:44px;font-size:14.5px}
   .btn.sm{min-height:38px;font-size:13.5px;padding:6px 12px}
   .chk{padding:10px 0}.chk input{width:22px;height:22px;margin-top:1px}
@@ -2627,7 +2627,7 @@ function fbPwDlg(a){
   const f=fbPwField('Mật khẩu','fb-pw','current-password'),pw=f.querySelector('input');
   const err=h('p',{class:'small',role:'alert','aria-live':'polite',style:'color:#B00020;min-height:18px;margin:8px 0 0'});
   const go=h('button',{class:'btn primary',type:'submit',style:'width:100%;margin-top:14px'},'Đăng nhập');
-  const form=h('form',{onsubmit:async ev=>{ev.preventDefault();
+  const form=h('form',{class:'stack',onsubmit:async ev=>{ev.preventDefault();
     if(!pw.value){err.textContent='Nhập mật khẩu.';pw.focus();return;}
     go.disabled=true;go.textContent='Đang kiểm tra…';err.textContent='';
     let r;try{r=await window.__fbLogin(a.id,pw.value);}catch(e){r={ok:false,msg:'Không đăng nhập được. Thử lại sau.'};}
@@ -2642,7 +2642,7 @@ function fbChangePwDlg(){
   const i1=f1.querySelector('input'),i2=f2.querySelector('input'),i3=f3.querySelector('input');
   const err=h('p',{class:'small',role:'alert',style:'color:#B00020;min-height:18px;margin:8px 0 0'});
   const go=h('button',{class:'btn primary',type:'submit',style:'width:100%;margin-top:14px'},'Đổi mật khẩu');
-  const form=h('form',{onsubmit:async ev=>{ev.preventDefault();err.textContent='';
+  const form=h('form',{class:'stack',onsubmit:async ev=>{ev.preventDefault();err.textContent='';
     if(i2.value.length<8){err.textContent='Mật khẩu mới cần ít nhất 8 ký tự.';return;}
     if(i2.value!==i3.value){err.textContent='Hai lần nhập mật khẩu mới chưa giống nhau.';return;}
     if(i2.value===i1.value){err.textContent='Mật khẩu mới phải khác mật khẩu hiện tại.';return;}
@@ -4866,6 +4866,7 @@ pages['thong-ke']={render(root){
 
 /* ---- build log + errors */
 const BUILD_LOG=[
+['05/11/2026','B18b','Claude','Sửa giao diện hộp đăng nhập và đổi mật khẩu: ô nhập mật khẩu có kiểu giống các ô khác (bo góc, viền), các ô cách nhau rõ, không đè lên nhãn','Chờ thử','Ô mật khẩu chưa có kiểu, nhãn sát ô phía trên','Chỉ đổi giao diện'],
 ['05/11/2026','B18','Claude','Cài đặt có mục Sao lưu dữ liệu ra Excel (trưởng phòng): một file .xlsx gồm sheet Mau, Ket_qua, So_lieu_goc, Bang_ke, Bang_ke_dong, Nhat_ky, Thiet_bi, Cau_hinh, Bieu_mau_lich_su, Luu_giu_chi_muc, Bo_dem_so, Loi_he_thong và DuLieu_Tho (JSON đầy đủ từng tài liệu, cắt ô 30.000 ký tự), sheet Doc_toi giải thích. Ghi lại lần sao lưu gần nhất, nhắc trên Tổng quan khi quá 7 ngày. Mặc định bỏ nội dung file nhị phân để file nhẹ, có tùy chọn kèm theo','Chờ thử','','Thử với dữ liệu thật, mở bằng Excel kiểm tra từng sheet'],
 ['05/11/2026','B17','Claude','Đăng nhập bằng mật khẩu Firebase theo từng người: chọn tên trong danh sách tài khoản rồi nhập mật khẩu do trưởng phòng tạo ở Firebase; có nút Đổi mật khẩu và Đăng xuất (đăng xuất cả phiên Firebase). Bỏ khung email/mật khẩu hiện trước trang đăng nhập. Chưa đăng nhập thì không đọc kho dữ liệu nên hết báo lỗi permission-denied; nếu còn lỗi này thì chỉ báo một lần sau khi đăng nhập. Khi chạy ngoài Firebase vẫn là chế độ chọn tên không mật khẩu','Chờ thử','Trang đăng nhập đọc kho dữ liệu trước khi có người đăng nhập, bị Firebase từ chối','Nâng cấp bản Firebase kèm firebase/ v0.23.0'],
 ['05/11/2026','B16','Claude','Trang đăng nhập đặt ảnh trụ sở Trung tâm làm hình nền bên trái, phủ lớp mờ chuyển màu để chữ rõ, logo và tên đơn vị ở góc trên, tiêu đề cùng bốn bước nghiệp vụ dạng viên thuốc ở phía dưới; bên phải là thẻ chọn tài khoản. Bỏ dòng mô tả quy trình. Điện thoại: ảnh thành dải đầu trang, thẻ tài khoản bên dưới. Ảnh nhúng hai cỡ (720 và 1448 px) để máy tự chọn','Chờ thử','Ảnh gốc do phòng cung cấp, đã nén WebP'],
