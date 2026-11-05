@@ -10,6 +10,7 @@ Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.24.0) trê
 | `public/fb-shim.js` | Cầu nối: đăng nhập theo mật khẩu từng người, kho dữ liệu, khóa cấp số thứ tự. |
 | `public/firebase-config.js` | **Cần điền** cấu hình Firebase của anh; có thêm khối `FIREBASE_LOGIN` (đuôi email, ngoại lệ). |
 | `public/manifest.webmanifest`, `public/sw.js`, `public/icons/` | Cài web app lên màn hình điện thoại với icon logo. |
+| `push/` | **Tùy chọn**, cần gói Blaze: Cloud Function gửi thông báo đẩy nền khi đã tắt ứng dụng. Xem mục "Thông báo giao việc". |
 | `firestore.rules` | Luật bảo mật: chỉ email trong danh sách được vào. Đã ghi sẵn 11 email của 11 tài khoản. |
 | `firebase.json`, `.firebaserc` | Cấu hình triển khai. `.firebaserc` **cần điền** mã dự án. |
 | `scripts/build_public.py` | Sinh lại `public/index.html` khi có phiên bản web app mới. |
@@ -68,6 +69,36 @@ Bản triển khai đã có sẵn manifest, icon logo (thư mục `public/icons/
 - **Máy tính (Chrome/Edge)**: biểu tượng cài đặt ở cuối thanh địa chỉ.
 
 Biểu tượng hiện logo của đơn vị, tên dưới icon là "Mẫu thử nghiệm", mở ra toàn màn hình không có thanh địa chỉ. Muốn đổi logo hoặc tên: thay file trong `public/icons/` và sửa `short_name` trong `public/manifest.webmanifest`, rồi `firebase deploy`. iPhone chỉ cài được từ Safari. Nếu đã cài từ trước mà icon cũ, xóa icon rồi thêm lại.
+
+## Thông báo giao việc (bản 0.26.0)
+
+**Có sẵn, không cần cấu hình thêm, không tốn phí.** Khi trưởng phòng giao việc, đổi người, trả lại, hoặc cán bộ nộp kết quả chờ soát xét, hoặc chờ phê duyệt, hoặc có đề nghị sửa phiếu, người liên quan nhận thông báo:
+- chuông trên điện thoại, số chưa đọc ở menu và trên tiêu đề tab, trang **Thông báo**, âm báo;
+- thông báo của hệ điều hành (Windows, macOS, Android) khi người đó đang ở cửa sổ khác hoặc ứng dụng chạy nền;
+- mỗi người tự bấm **Bật thông báo trên thiết bị này** ở trang Thông báo (trình duyệt hỏi quyền một lần cho mỗi thiết bị).
+
+Giới hạn: khi đã **tắt hẳn** ứng dụng hoặc trình duyệt, chưa nhận được thông báo; thông báo chờ sẵn trong hộp và hiện khi mở lại. Muốn nhận cả lúc tắt ứng dụng, bật tầng đẩy nền dưới đây.
+
+### Đẩy nền khi đã tắt ứng dụng (tùy chọn)
+
+Cần: dự án Firebase ở **gói Blaze** (trả theo mức dùng, cần thẻ thanh toán; với quy mô của phòng thường trong hạn mức miễn phí, nên đặt cảnh báo ngân sách), cài Node.js và Firebase CLI.
+
+1. Firebase Console > Project settings > **Cloud Messaging** > **Web Push certificates** > Generate key pair. Sao chép khóa công khai.
+2. Dán khóa vào `public/firebase-config.js`, dòng `window.FIREBASE_PUSH={ vapidKey:"..." }`.
+3. Mở `push/functions/index.js`, sửa `REGION` cho cùng khu vực với Firestore (Firebase Console > Firestore > Data > Location).
+4. Sửa `push/.firebaserc` cho đúng mã dự án. Trong thư mục `push`, chạy:
+   ```
+   cd push/functions && npm install && cd ..
+   firebase deploy --only functions
+   ```
+5. Triển khai lại giao diện: `firebase deploy --only hosting` (từ thư mục gốc của gói).
+6. Mỗi cán bộ mở web app trên thiết bị, vào **Thông báo**, bấm **Bật thông báo trên thiết bị này** và chọn Cho phép.
+
+Cách hoạt động: web app ghi `pushq/<mã>`; hàm `guiThongBao` đọc mã thiết bị ở `fcm_tokens/<mã nhân sự>`, gửi qua Firebase Cloud Messaging rồi xóa tài liệu `pushq`. Chưa bật bước 1 đến 4 thì web app không ghi `pushq`, mọi thứ vẫn chạy ở tầng miễn phí.
+
+Lưu ý: iPhone chỉ nhận được khi web app đã cài lên màn hình chính (iOS 16.4 trở lên). Nội dung thông báo có thể hiện trên màn hình khóa. Tầng đẩy nền chưa được thử trên Firebase thật; sau khi triển khai, dùng nút **Gửi thông báo thử** và một lần giao việc thật để kiểm tra, xem Firebase Console > Functions > Logs nếu không nhận được.
+
+Dọn dẹp: thông báo đã đọc quá 30 ngày và mọi thông báo quá 90 ngày được tự xóa khi người dùng vào web app. Mọi tài khoản nhân viên đọc được hộp thông báo của nhau (cùng quy tắc với dữ liệu khác).
 
 ## Sao lưu dữ liệu ra Excel
 

@@ -16,3 +16,8 @@ window.FIREBASE_LOGIN={
   domain:"ptn-vlxd.vn",
   emails:{ NS009:"hcly113@gmail.com" }
 };
+
+/* Thông báo đẩy nền khi đã tắt ứng dụng (tùy chọn, cần gói Blaze và thư mục push/ trong gói triển khai).
+   Dán khóa "Web Push certificate" (Firebase Console > Project settings > Cloud Messaging) vào vapidKey.
+   Để trống: vẫn có chuông, đếm chưa đọc, âm báo và thông báo của hệ điều hành khi ứng dụng đang mở hoặc chạy nền. */
+window.FIREBASE_PUSH={ vapidKey:"" };

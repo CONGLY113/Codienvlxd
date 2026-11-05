@@ -95,6 +95,25 @@
       window.__fbLogin=function(id,pw){
         return U.signInWithEmailAndPassword(auth,emailOf(id),pw).then(function(){setSess(id);return {ok:true};},function(e){return {ok:false,msg:viErr(e)};});};
       window.__fbSignOut=function(){setSess(null);return U.signOut(auth);};
+
+      /* thông báo đẩy nền (tùy chọn): lấy mã thiết bị của Firebase Cloud Messaging và lưu ở fcm_tokens/<mã nhân sự> */
+      window.__fbPushEnable=function(id){
+        var P=window.FIREBASE_PUSH||{};
+        if(!P.vapidKey)return Promise.resolve({ok:false,msg:'Chưa cấu hình FIREBASE_PUSH.vapidKey trong firebase-config.js.'});
+        if(!('serviceWorker' in navigator))return Promise.resolve({ok:false,msg:'Trình duyệt không hỗ trợ.'});
+        function hs(t){var h=5381,i;for(i=0;i<t.length;i++){h=((h<<5)+h+t.charCodeAt(i))|0;}return (h>>>0).toString(36);}
+        return Promise.all([import(SDK+'firebase-messaging.js'),navigator.serviceWorker.ready]).then(function(r){
+          var M=r[0],reg=r[1];
+          return M.isSupported().then(function(sup){
+            if(!sup)return {ok:false,msg:'Trình duyệt này không hỗ trợ thông báo đẩy.'};
+            return M.getToken(M.getMessaging(app),{vapidKey:P.vapidKey,serviceWorkerRegistration:reg}).then(function(tok){
+              if(!tok)return {ok:false,msg:'Không lấy được mã thiết bị.'};
+              var o={};o['t'+hs(tok)]={token:tok,ua:String(navigator.userAgent).slice(0,120),at:new Date().toISOString()};
+              return state.db.doc('fcm_tokens/'+id).update({tokens:o}).then(function(){return {ok:true};});
+            });
+          });
+        }).catch(function(e){return {ok:false,msg:(e&&e.message)||'lỗi'};});
+      };
       window.__fbChangePassword=function(oldPw,newPw){
         var u=auth.currentUser;if(!u||u.isAnonymous||!u.email)return Promise.resolve({ok:false,msg:'Chưa đăng nhập.'});
         return U.reauthenticateWithCredential(u,U.EmailAuthProvider.credential(u.email,oldPw))

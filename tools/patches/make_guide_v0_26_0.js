@@ -114,10 +114,10 @@ C.push(gap(1400));
 C.push(new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: 'PHÒNG THÍ NGHIỆM VLXD · QUẢNG TRỊ', bold: true, size: 22, color: TEAL, font: FONT, characterSpacing: 40 })] }));
 C.push(new Paragraph({ spacing: { after: 60, line: 900, lineRule: 'atLeast' }, children: [new TextRun({ text: 'Hướng dẫn đăng nhập', bold: true, size: 64, color: INK, font: FONT })] }));
 C.push(new Paragraph({ spacing: { after: 160, line: 900, lineRule: 'atLeast' }, border: { bottom: { style: BorderStyle.SINGLE, size: 18, color: TEAL, space: 10 } }, children: [new TextRun({ text: 'và trải nghiệm web app', bold: true, size: 64, color: INK, font: FONT })] }));
-C.push(new Paragraph({ spacing: { after: 400 }, children: [new TextRun({ text: 'Quản lý mẫu thử nghiệm · Phiên bản 0.25.0', size: 30, color: GREY, font: FONT })] }));
+C.push(new Paragraph({ spacing: { after: 400 }, children: [new TextRun({ text: 'Quản lý mẫu thử nghiệm · Phiên bản 0.26.0', size: 30, color: GREY, font: FONT })] }));
 C.push(img('tong-quan', 600) && new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 300 }, border: { top: { style: BorderStyle.SINGLE, size: 6, color: 'C9D3D8', space: 4 }, bottom: { style: BorderStyle.SINGLE, size: 6, color: 'C9D3D8', space: 4 }, left: { style: BorderStyle.SINGLE, size: 6, color: 'C9D3D8', space: 4 }, right: { style: BorderStyle.SINGLE, size: 6, color: 'C9D3D8', space: 4 } }, children: [img('tong-quan', 600)] }));
 C.push(grid(['Thông tin', 'Nội dung'], [
-  ['Phiên bản', '0.25.0 (cập nhật 06/11/2026)'],
+  ['Phiên bản', '0.26.0 (cập nhật 06/11/2026)'],
   ['Đối tượng', 'Trưởng phòng, giám đốc, cán bộ giao nhận mẫu, cán bộ thử nghiệm, kế toán, thủ quỹ'],
   ['Địa chỉ web app', '[Trưởng phòng điền địa chỉ sau khi triển khai trên Firebase]'],
   ['Mật khẩu', 'Do trưởng phòng cấp riêng cho từng người; có thể tự đổi sau khi vào'],
@@ -136,7 +136,8 @@ C.push(grid(['Phần', 'Nội dung', 'Dành cho'], [
   ['7', 'Sao lưu toàn bộ dữ liệu ra Excel', 'Trưởng phòng'],
   ['8', 'Sửa đổi, thay thế phiếu đã phát hành', 'Giao nhận mẫu, trưởng phòng, giám đốc'],
   ['9', 'Cài web app lên màn hình điện thoại', 'Tất cả'],
-  ['10', 'Gặp sự cố thì xử lý thế nào', 'Tất cả'],
+  ['10', 'Nhận thông báo giao việc (máy tính, điện thoại)', 'Tất cả'],
+  ['11', 'Gặp sự cố thì xử lý thế nào', 'Tất cả'],
 ], [900, 6338, 2400]));
 C.push(gap(160));
 C.push(box('Cách đọc tài liệu này', [
@@ -387,7 +388,32 @@ C.push(box('Lưu ý', [
   '• Nếu biểu tượng cũ chưa đổi, gỡ biểu tượng rồi cài lại.',
 ], LIGHT, TEAL));
 
-C.push(H1('10. Gặp sự cố thì xử lý thế nào'));
+
+// 10
+C.push(H1('10. Nhận thông báo giao việc'));
+C.push(P('Khi có việc liên quan đến bạn, web app báo ngay: **chuông** trên điện thoại, **số đỏ** ở menu và trên tiêu đề tab, **âm báo**, và **thông báo của hệ điều hành** (máy tính, Android) khi bạn đang ở cửa sổ khác.'));
+C.push(grid(['Sự kiện', 'Ai nhận thông báo'], [
+  ['Trưởng phòng giao việc, giao cả phiếu, đổi người', 'Cán bộ thử nghiệm được giao (người bị đổi cũng được báo)'],
+  ['Soát xét hoặc phê duyệt trả lại làm lại', 'Cán bộ thử nghiệm của mẫu đó, kèm lý do'],
+  ['Cán bộ nộp kết quả', 'Người soát xét (Giám đốc nếu Trưởng phòng tự thử nghiệm)'],
+  ['Soát xét đạt', 'Giám đốc, chờ phê duyệt'],
+  ['Đề nghị sửa phiếu: lập, soát xét đạt, phát hành', 'Người soát xét, Giám đốc, người lập đề nghị'],
+], [4600, 5038]));
+C.push(gap(100));
+C.push(H2('Bật thông báo trên thiết bị của bạn (làm một lần mỗi thiết bị)'));
+C.push(num('Đăng nhập, vào mục **Thông báo** (menu, hoặc bấm biểu tượng chuông trên điện thoại).', 'num4'));
+C.push(num('Bấm **Bật thông báo trên thiết bị này**, trình duyệt hỏi quyền, chọn **Cho phép**.', 'num4'));
+C.push(num('Bấm **Gửi thông báo thử** để kiểm tra. Có thể tắt âm báo hoặc thông báo hệ điều hành bằng hai ô đánh dấu.', 'num4'));
+C.push(...figure('tb-page', 'Hình 24. Trang Thông báo: trạng thái, nút bật, danh sách thông báo (dữ liệu minh họa)', 520));
+C.push(box('Cần nhớ', [
+  '• Mỗi thiết bị bật riêng: bật ở máy tính chưa có nghĩa là điện thoại cũng nhận.',
+  '• Khi **đã tắt hẳn** ứng dụng hoặc trình duyệt, thông báo chờ sẵn trong hộp và hiện khi bạn mở lại. Muốn nhận cả lúc tắt ứng dụng, trưởng phòng cần bật dịch vụ đẩy nền của Firebase (gói Blaze), xem hướng dẫn triển khai.',
+  '• **iPhone** chỉ nhận được khi đã cài web app lên màn hình chính (Phần 9) và dùng iOS 16.4 trở lên.',
+  '• Nếu thấy “Đang bị chặn”: vào cài đặt trang web của trình duyệt, cho phép Thông báo rồi tải lại trang.',
+  '• Bạn không nhận thông báo cho chính thao tác của mình.',
+]));
+
+C.push(H1('11. Gặp sự cố thì xử lý thế nào'));
 C.push(grid(['Hiện tượng', 'Nguyên nhân thường gặp', 'Cách xử lý'], [
   ['Báo sai mật khẩu', 'Gõ nhầm, bật Caps Lock, bộ gõ tiếng Việt', 'Bật “Hiện mật khẩu” kiểm tra, gõ lại. Vẫn sai: báo trưởng phòng đặt lại.'],
   ['Quên mật khẩu', '—', 'Báo trưởng phòng đặt lại mật khẩu trên Firebase.'],
@@ -402,7 +428,7 @@ C.push(P('**Khi cần hỗ trợ:** chụp màn hình lỗi (kèm thời gian) v
 // ---------- tài liệu ----------
 const doc = new Document({
   creator: 'Phòng thí nghiệm VLXD',
-  title: 'Hướng dẫn đăng nhập và trải nghiệm web app Quản lý mẫu thử nghiệm v0.25.0',
+  title: 'Hướng dẫn đăng nhập và trải nghiệm web app Quản lý mẫu thử nghiệm v0.26.0',
   styles: {
     default: { document: { run: { font: FONT, size: 22, color: INK } } },
     paragraphStyles: [
@@ -418,12 +444,13 @@ const doc = new Document({
   numbering: { config: [
     { reference: 'bul', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 270 } } } }] },
     { reference: 'num1', levels: [{ level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 360 } } } }] },
+    { reference: 'num4', levels: [{ level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 360 } } } }] },
     { reference: 'num3', levels: [{ level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 360 } } } }] },
     { reference: 'num2', levels: [{ level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 360 } } } }] },
   ] },
   sections: [{
     properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } }, titlePage: true },
-    headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Hướng dẫn đăng nhập và trải nghiệm web app · v0.25.0', size: 17, color: GREY, font: FONT })] })] }), first: new Header({ children: [new Paragraph({ children: [] })] }) },
+    headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'Hướng dẫn đăng nhập và trải nghiệm web app · v0.26.0', size: 17, color: GREY, font: FONT })] })] }), first: new Header({ children: [new Paragraph({ children: [] })] }) },
     footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Phòng thí nghiệm VLXD · Quảng Trị    |    Trang ', size: 17, color: GREY, font: FONT }), new TextRun({ children: [PageNumber.CURRENT], size: 17, color: GREY, font: FONT })] })] }), first: new Footer({ children: [new Paragraph({ children: [] })] }) },
     children: C,
   }],
@@ -431,6 +458,6 @@ const doc = new Document({
 
 Packer.toBuffer(doc).then(b => {
   fs.mkdirSync('/mnt/user-data/outputs', { recursive: true });
-  fs.writeFileSync('/mnt/user-data/outputs/HUONG_DAN_DANG_NHAP_VA_SU_DUNG_V0_25_0.docx', b);
+  fs.writeFileSync('/mnt/user-data/outputs/HUONG_DAN_DANG_NHAP_VA_SU_DUNG_V0_26_0.docx', b);
   console.log('ok', (b.length / 1e6).toFixed(2), 'MB');
 });
