@@ -86,6 +86,23 @@ firebase deploy --only hosting
 ```
 Sửa danh sách email: `firebase deploy --only firestore:rules`.
 
+### Deploy lại có mất dữ liệu cán bộ đã nhập không?
+
+Không. Dữ liệu (mẫu, phiếu, bảng kê, nhật ký, cấu hình, hồ sơ sửa phiếu) nằm trong **Firestore**; tài khoản nằm trong **Authentication**. Hai nơi này tách khỏi Hosting.
+
+| Lệnh | Việc làm | Dữ liệu |
+|---|---|---|
+| `firebase deploy --only hosting` | Thay file giao diện (index.html, sw.js, icon) | Giữ nguyên |
+| `firebase deploy --only firestore:rules` | Thay quy tắc truy cập, không đổi dữ liệu | Giữ nguyên |
+| `firebase deploy` (không `--only`) | Hosting, quy tắc, chỉ mục | Giữ nguyên |
+
+Những điều cần chú ý:
+- Luôn deploy đúng dự án (kiểm tra `.firebaserc` hoặc `firebase use`). Deploy sang dự án khác sẽ thấy dữ liệu trống vì mỗi dự án có Firestore riêng.
+- Chỉ **xóa dữ liệu** khi vào Firebase Console xóa bộ sưu tập, xóa dự án, hoặc chạy lệnh xóa riêng (`firebase firestore:delete`). Deploy không làm việc này.
+- Nhân viên đang mở trang vẫn dùng bản cũ đến khi tải lại trang (F5 hoặc mở lại ứng dụng); không mất dữ liệu đã lưu.
+- Trước mỗi lần cập nhật lớn, bấm **Xuất toàn bộ dữ liệu ra Excel** trong Cài đặt để có bản lưu.
+- Dữ liệu nhập ở bản chạy thử Artifact (kho riêng của Artifact) **không** tự sang Firebase. Dữ liệu chỉ ở Firebase sau khi cán bộ nhập trên địa chỉ Firebase.
+
 ## Cách hoạt động và phân quyền
 
 - Mở địa chỉ web: hiện trang đăng nhập của web app (danh sách tài khoản). Chọn tên mình, nhập mật khẩu đã tạo ở Firebase. Đúng thì vào, web app tải lại với phiên của người đó; sai thì báo "Sai mật khẩu". Chưa đăng nhập thì web app **không đọc dữ liệu dùng chung** nên không còn lỗi `permission-denied`.
