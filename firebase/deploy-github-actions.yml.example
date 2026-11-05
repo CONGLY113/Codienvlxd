@@ -1,0 +1,18 @@
+# Sao chép thành .github/workflows/firebase-deploy.yml ở thư mục gốc kho Git
+name: Deploy Firebase
+on:
+  push:
+    branches: [main]
+    paths: ['firebase/**']
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: DIEN_PROJECT_ID
+          entryPoint: firebase

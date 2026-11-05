@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== DANH SÁCH TÀI KHOẢN NHÂN VIÊN ĐƯỢC VÀO HỆ THỐNG =====
+    // Ghi email viết thường. Thêm hoặc bớt người: sửa danh sách rồi chạy: firebase deploy --only firestore:rules
+    // Người dùng phải có tài khoản email + mật khẩu trong Firebase Console > Authentication > Users.
+    function staffEmails() {
+      return [
+        'hcly113@gmail.com'
+        // , 'canbo1@donvi.vn'
+        // , 'canbo2@donvi.vn'
+      ];
+    }
+
+    function signedIn() { return request.auth != null; }
+    function isStaff() {
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider == 'password'
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() in staffEmails();
+    }
+    function isAnon() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    match /{col}/{docId} {
+      // Nhân viên: đọc và ghi mọi dữ liệu
+      allow read, write: if isStaff();
+
+      // Khách hàng (đăng nhập ẩn danh): chỉ GỬI yêu cầu mới ở cổng khách hàng
+      allow create: if isAnon()
+        && col.matches('samples.*')
+        && request.resource.data.kenh == 'khach'
+        && request.resource.data.status == 'cho_tiep_nhan';
+
+      // Khách hàng ghi dòng nhật ký "Khách gửi yêu cầu"
+      allow create: if isAnon() && col == 'audit';
+
+      // Tra cứu phiếu bằng mã QR: đọc đúng một bản lưu, không liệt kê được cả bộ sưu tập
+      allow get: if isAnon() && col == 'archive';
+      // Cho khách chưa đăng nhập tra cứu phiếu bằng QR (trang tra cứu cần liệt kê bản lưu).
+      // Mở dòng dưới là cho MỌI người có link đọc cả bộ sưu tập archive. Chỉ bật khi đã cân nhắc rủi ro lộ hồ sơ.
+      // allow list: if isAnon() && col == 'archive';
+    }
+  }
+}

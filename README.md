@@ -12,6 +12,7 @@ Phiên bản hiện tại: **0.22.0** (05/11/2026). Nhật ký từng phiên b�
 | `docs/nhat-ky/` | Nhật ký build từng phiên bản, phân tích biểu mẫu. |
 | `docs/cau-hoi/` | Các file Excel câu hỏi xác nhận và mẫu kiểm tra đã gửi. |
 | `assets/` | Logo đơn vị (nền trong suốt), ảnh trụ sở dùng cho trang đăng nhập. |
+| `firebase/` | Gói triển khai lên Firebase (Hosting + Firestore + Authentication). Xem `firebase/HUONG_DAN_TRIEN_KHAI.md`. |
 | `tools/patches/` | Mã vá theo từng phiên bản (`patchNN.py`) và các đoạn JS/CSS chèn vào. |
 | `tools/templates/` | Biểu mẫu Excel gốc của các loại mẫu (nguồn nhúng vào web app). |
 | `tools/tests/` | Kiểm thử Playwright (đăng nhập, bảng kê, biểu mẫu, hồi quy) và ảnh chụp. |
@@ -20,6 +21,15 @@ Phiên bản hiện tại: **0.22.0** (05/11/2026). Nhật ký từng phiên b�
 
 - Mở trực tiếp file HTML trong trình duyệt để xem thử (dữ liệu lưu cục bộ trong trình duyệt).
 - Để dùng chung cho cả phòng, đăng file HTML thành Artifact trên claude.ai (có kho dữ liệu dùng chung), chia sẻ link và mời cán bộ quyền Contributor trở lên.
+
+## Triển khai lên Firebase
+
+Xem `firebase/HUONG_DAN_TRIEN_KHAI.md`. Sau khi sửa `app/quan-ly-mau-thu-nghiem.html`, sinh lại trang triển khai:
+
+```
+python3 firebase/scripts/build_public.py app/quan-ly-mau-thu-nghiem.html
+cd firebase && firebase deploy --only hosting
+```
 
 ## Kiểm thử
 
