@@ -2,14 +2,27 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ===== DANH SÁCH TÀI KHOẢN NHÂN VIÊN ĐƯỢC VÀO HỆ THỐNG =====
-    // Ghi email viết thường. Thêm hoặc bớt người: sửa danh sách rồi chạy: firebase deploy --only firestore:rules
-    // Người dùng phải có tài khoản email + mật khẩu trong Firebase Console > Authentication > Users.
+    // ===== DANH SÁCH EMAIL ĐƯỢC VÀO HỆ THỐNG (nhân viên) =====
+    // Mỗi tài khoản trong danh sách của web app có một email trong Firebase:
+    //   - NS009 (Hoàng Công Lý)  dùng email thật: hcly113@gmail.com
+    //   - các tài khoản khác dùng  <mã nhân sự viết thường>@ptn-vlxd.vn  (ví dụ ns002@ptn-vlxd.vn)
+    // Phải tạo ĐỦ các người dùng này ở Firebase Console > Authentication > Users (mật khẩu do trưởng phòng đặt)
+    // và TẮT cho phép tự đăng ký (Authentication > Settings > User actions > bỏ "Enable create (sign-up)").
+    // Muốn bớt hoặc thêm người: sửa danh sách rồi chạy: firebase deploy --only firestore:rules
+    // Nếu đổi đuôi email (domain) thì sửa cả ở public/firebase-config.js.
     function staffEmails() {
       return [
-        'hcly113@gmail.com'
-        // , 'canbo1@donvi.vn'
-        // , 'canbo2@donvi.vn'
+        'hcly113@gmail.com',          // NS009 Hoàng Công Lý
+        'ns010@ptn-vlxd.vn',          // Lưu Minh Tuấn
+        'ns011@ptn-vlxd.vn',          // Nguyễn Thị Bích Lan
+        'ns002@ptn-vlxd.vn',          // Trần Đăng Hùng
+        'ns001@ptn-vlxd.vn',          // Nguyễn Văn Sự
+        'ns003@ptn-vlxd.vn',          // Nguyễn Mậu Thiện
+        'ns004@ptn-vlxd.vn',          // Trần Anh Dũng
+        'ns007@ptn-vlxd.vn',          // Lê Phước Đức
+        'ns008@ptn-vlxd.vn',          // Nguyễn Tiến Hoàng
+        'ns012@ptn-vlxd.vn',          // Hồ Thị Bích Thuỷ
+        'ns013@ptn-vlxd.vn'           // Trần Hoàn
       ];
     }
 

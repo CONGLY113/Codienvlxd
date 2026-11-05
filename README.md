@@ -2,13 +2,13 @@
 
 Web app một file (HTML, JavaScript thuần) quản lý toàn bộ quy trình thí nghiệm vật liệu xây dựng của Phòng thí nghiệm chuyên ngành xây dựng, Trung tâm Kỹ thuật Tiêu chuẩn Đo lường Chất lượng Quảng Trị: tiếp nhận mẫu, giao việc, nhập số liệu, tự tính toán, soát xét, phê duyệt, phát hành phiếu kết quả (có mã QR tra cứu), bảng kê và thanh toán, quản lý thiết bị, lưu trữ.
 
-Phiên bản hiện tại: **0.22.0** (05/11/2026). Nhật ký từng phiên bản nằm trong `docs/nhat-ky/`.
+Phiên bản hiện tại: **0.23.0** (05/11/2026). Nhật ký từng phiên bản nằm trong `docs/nhat-ky/`.
 
 ## Cấu trúc
 
 | Thư mục | Nội dung |
 |---|---|
-| `app/quan-ly-mau-thu-nghiem.html` | Web app (bản mới nhất). Lịch sử Git giữ các bản 0.12.0 đến 0.22.0. |
+| `app/quan-ly-mau-thu-nghiem.html` | Web app (bản mới nhất). Lịch sử Git giữ các bản 0.12.0 đến 0.23.0. |
 | `docs/nhat-ky/` | Nhật ký build từng phiên bản, phân tích biểu mẫu. |
 | `docs/cau-hoi/` | Các file Excel câu hỏi xác nhận và mẫu kiểm tra đã gửi. |
 | `assets/` | Logo đơn vị (nền trong suốt), ảnh trụ sở dùng cho trang đăng nhập. |
@@ -43,6 +43,7 @@ Lưu ý: một số script còn trỏ đường dẫn làm việc cũ (`/tmp/w/.
 
 ## Vận hành
 
-- Tài khoản thử trong màn hình đăng nhập chưa có mật khẩu (chế độ chạy thử).
+- Chạy độc lập (không Firebase): tài khoản trong màn hình đăng nhập chưa có mật khẩu (chế độ chạy thử).
+- Chạy trên Firebase: chọn tên trong danh sách rồi nhập mật khẩu tạo ở Firebase Authentication (xem bảng email trong `firebase/HUONG_DAN_TRIEN_KHAI.md`).
 - Dữ liệu thật nằm trong kho dữ liệu của Artifact, không nằm trong kho Git này.
 - Dữ liệu cấu hình (đơn giá, ngân hàng, biểu mẫu tùy chỉnh) lưu trong kho dữ liệu, không nằm trong mã nguồn.

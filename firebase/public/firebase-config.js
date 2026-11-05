@@ -8,3 +8,11 @@ window.FIREBASE_CONFIG={
   messagingSenderId:"DIEN_SENDER_ID",
   appId:"DIEN_APP_ID"
 };
+
+/* Đăng nhập theo danh sách tài khoản của web app: mỗi tài khoản ứng với một email trong Firebase Authentication.
+   Mặc định email = <mã nhân sự viết thường>@<domain>, trừ các tài khoản ghi riêng ở "emails".
+   Nếu sửa ở đây thì sửa cả danh sách staffEmails() trong firestore.rules cho khớp. */
+window.FIREBASE_LOGIN={
+  domain:"ptn-vlxd.vn",
+  emails:{ NS009:"hcly113@gmail.com" }
+};
