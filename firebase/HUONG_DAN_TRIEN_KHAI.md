@@ -9,6 +9,7 @@ Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.24.0) trê
 | `public/index.html` | Web app (đã gắn cầu nối Firebase). Sinh ra bằng `scripts/build_public.py`. |
 | `public/fb-shim.js` | Cầu nối: đăng nhập theo mật khẩu từng người, kho dữ liệu, khóa cấp số thứ tự. |
 | `public/firebase-config.js` | **Cần điền** cấu hình Firebase của anh; có thêm khối `FIREBASE_LOGIN` (đuôi email, ngoại lệ). |
+| `public/manifest.webmanifest`, `public/sw.js`, `public/icons/` | Cài web app lên màn hình điện thoại với icon logo. |
 | `firestore.rules` | Luật bảo mật: chỉ email trong danh sách được vào. Đã ghi sẵn 11 email của 11 tài khoản. |
 | `firebase.json`, `.firebaserc` | Cấu hình triển khai. `.firebaserc` **cần điền** mã dự án. |
 | `scripts/build_public.py` | Sinh lại `public/index.html` khi có phiên bản web app mới. |
@@ -57,6 +58,16 @@ firebase deploy
 Lệnh đẩy cả trang web (Hosting) và luật bảo mật (Firestore rules). Kết thúc sẽ hiện địa chỉ dạng `https://<project-id>.web.app`. Gửi địa chỉ này cho cán bộ.
 
 **7. Sau khi vào được.** Chọn tên Hoàng Công Lý, nhập mật khẩu đã tạo cho `hcly113@gmail.com`, vào Cài đặt, mục "Link web app", dán địa chỉ `.web.app` (để mã QR tra cứu trên phiếu trỏ đúng). Nhập lại đơn giá, thông tin ngân hàng ở các mục tương ứng nếu chạy mới hoàn toàn.
+
+## Đưa web app ra màn hình điện thoại (có icon logo)
+
+Bản triển khai đã có sẵn manifest, icon logo (thư mục `public/icons/`) và `sw.js`, nên mỗi người tự cài được, không cần cửa hàng ứng dụng:
+
+- **iPhone/iPad (Safari)**: mở địa chỉ web app → nút Chia sẻ → **Thêm vào Màn hình chính** → Thêm.
+- **Android (Chrome)**: mở địa chỉ → menu ⋮ → **Cài đặt ứng dụng** (hoặc **Thêm vào màn hình chính**).
+- **Máy tính (Chrome/Edge)**: biểu tượng cài đặt ở cuối thanh địa chỉ.
+
+Biểu tượng hiện logo của đơn vị, tên dưới icon là "Mẫu thử nghiệm", mở ra toàn màn hình không có thanh địa chỉ. Muốn đổi logo hoặc tên: thay file trong `public/icons/` và sửa `short_name` trong `public/manifest.webmanifest`, rồi `firebase deploy`. iPhone chỉ cài được từ Safari. Nếu đã cài từ trước mà icon cũ, xóa icon rồi thêm lại.
 
 ## Sao lưu dữ liệu ra Excel
 
