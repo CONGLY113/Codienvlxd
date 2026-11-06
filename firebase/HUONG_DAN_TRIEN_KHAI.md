@@ -1,6 +1,6 @@
 # Triển khai web app lên Firebase
 
-Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.27.2) trên Firebase Hosting, lưu dữ liệu dùng chung bằng Cloud Firestore, đăng nhập bằng Firebase Authentication. Web app tự nhận ra có Firebase (nhờ `public/fb-shim.js`) và chuyển sang đăng nhập bằng mật khẩu; không có Firebase thì vẫn chạy chế độ chọn tên như cũ.
+Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.27.3) trên Firebase Hosting, lưu dữ liệu dùng chung bằng Cloud Firestore, đăng nhập bằng Firebase Authentication. Web app tự nhận ra có Firebase (nhờ `public/fb-shim.js`) và chuyển sang đăng nhập bằng mật khẩu; không có Firebase thì vẫn chạy chế độ chọn tên như cũ.
 
 ## Gói gồm
 
@@ -174,3 +174,9 @@ Xem `deploy-github-actions.yml.example`: sao chép thành `.github/workflows/fir
 - Dữ liệu mới nằm ở các bộ sưu tập riêng `dv_gia`, `dv_cfg`, `dv_kh`, `dvbk_<yy>`, `dvbg_<yy>`, `dv_tb` (thiết bị), `dv_cc` (giấy chứng nhận). Không đụng dữ liệu thí nghiệm cũ. Luật `firestore.rules` đã áp dụng cho mọi bộ sưu tập, không cần sửa thêm.
 - Có 5 email mới cần tạo trong Authentication: `ns014` đến `ns018@ptn-vlxd.vn` (mã nhân viên tạm).
 - Nhớ chạy `firebase deploy --only firestore:rules,hosting` để cập nhật cả luật và web app.
+
+## Bản 0.27.3: Tổng hợp thanh toán và Khoán chi
+
+- Trang **Dịch vụ** của phòng Kiểm định hiệu chuẩn đo lường, Hóa sinh môi trường (và Cơ điện nếu có quyền lập bảng kê dịch vụ) có thêm tab **Tổng hợp thanh toán**: mã bảng kê, khách hàng, công trình/cơ sở, ngày lập, chưa thanh toán, đã thanh toán, thanh toán khoán chi. Có tìm kiếm, lọc theo tình trạng và khoảng ngày, dòng cộng, nút **Xuất Excel**.
+- Khi đề nghị thanh toán, chọn thêm hình thức **Khoán chi (đối trừ vào khoản chi)**. Thủ quỹ vẫn xác nhận như thường; khoản này tính vào cột khoán chi và trừ vào công nợ.
+- Không có collection hay quy tắc mới: deploy lại hosting là đủ, dữ liệu cũ giữ nguyên.
