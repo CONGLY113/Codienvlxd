@@ -1,6 +1,6 @@
 # Triển khai web app lên Firebase
 
-Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.27.1) trên Firebase Hosting, lưu dữ liệu dùng chung bằng Cloud Firestore, đăng nhập bằng Firebase Authentication. Web app tự nhận ra có Firebase (nhờ `public/fb-shim.js`) và chuyển sang đăng nhập bằng mật khẩu; không có Firebase thì vẫn chạy chế độ chọn tên như cũ.
+Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.27.2) trên Firebase Hosting, lưu dữ liệu dùng chung bằng Cloud Firestore, đăng nhập bằng Firebase Authentication. Web app tự nhận ra có Firebase (nhờ `public/fb-shim.js`) và chuyển sang đăng nhập bằng mật khẩu; không có Firebase thì vẫn chạy chế độ chọn tên như cũ.
 
 ## Gói gồm
 
@@ -11,7 +11,7 @@ Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.27.1) trê
 | `public/firebase-config.js` | **Cần điền** cấu hình Firebase của anh; có thêm khối `FIREBASE_LOGIN` (đuôi email, ngoại lệ). |
 | `public/manifest.webmanifest`, `public/sw.js`, `public/icons/` | Cài web app lên màn hình điện thoại với icon logo. |
 | `push/` | **Tùy chọn**, cần gói Blaze: Cloud Function gửi thông báo đẩy nền khi đã tắt ứng dụng. Xem mục "Thông báo giao việc". |
-| `firestore.rules` | Luật bảo mật: chỉ email trong danh sách được vào. Đã ghi sẵn 15 email của 15 tài khoản. |
+| `firestore.rules` | Luật bảo mật: chỉ email trong danh sách được vào. Đã ghi sẵn 16 email của 16 tài khoản. |
 | `firebase.json`, `.firebaserc` | Cấu hình triển khai. `.firebaserc` **cần điền** mã dự án. |
 | `scripts/build_public.py` | Sinh lại `public/index.html` khi có phiên bản web app mới. |
 
@@ -23,7 +23,7 @@ Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.27.1) trê
 - Bật **Email/Password**.
 - Bật **Anonymous** (cho cổng khách hàng gửi yêu cầu, không cần tài khoản).
 
-Sang tab **Users**, Add user, tạo **đủ 15 người dùng** sau (mật khẩu do trưởng phòng đặt, đưa riêng cho từng người). Email là tên đăng nhập ngầm: cán bộ **không phải gõ email**, chỉ chọn tên mình trong danh sách của web app rồi nhập mật khẩu.
+Sang tab **Users**, Add user, tạo **đủ 16 người dùng** sau (mật khẩu do trưởng phòng đặt, đưa riêng cho từng người). Email là tên đăng nhập ngầm: cán bộ **không phải gõ email**, chỉ chọn tên mình trong danh sách của web app rồi nhập mật khẩu.
 
 | Tài khoản trong web app | Email tạo ở Firebase |
 |---|---|
@@ -42,6 +42,7 @@ Sang tab **Users**, Add user, tạo **đủ 15 người dùng** sau (mật khẩ
 | NS015 Nguyễn Thị Cẩm Hiền (giao nhận mẫu, mã tạm) | `ns015@ptn-vlxd.vn` |
 | NS016 Giang Tấn Thông (Trưởng phòng Hóa sinh môi trường, mã tạm) | `ns016@ptn-vlxd.vn` |
 | NS017 Hoàng Thị Châu (giao nhận mẫu, mã tạm) | `ns017@ptn-vlxd.vn` |
+| NS018 Phan Thanh Giàn (Phó giám đốc, mã tạm) | `ns018@ptn-vlxd.vn` |
 
 Đuôi `@ptn-vlxd.vn` chỉ là tên giả để ghép với mã nhân sự, không cần là hộp thư thật. Vì vậy nút "quên mật khẩu bằng email" không dùng được với các email này: khi ai quên mật khẩu, trưởng phòng vào Authentication, Users, bấm dấu ba chấm ở người đó, chọn Reset password (hoặc xóa người dùng rồi tạo lại). Người dùng tự đổi mật khẩu bằng nút **Đổi mật khẩu** ở thanh bên của web app.
 
@@ -51,7 +52,7 @@ Sang tab **Users**, Add user, tạo **đủ 15 người dùng** sau (mật khẩ
 
 **4. Lấy cấu hình web.** Project settings (biểu tượng bánh răng), mục Your apps, bấm biểu tượng `</>` để đăng ký web app, copy khối `firebaseConfig`. Dán các giá trị vào `public/firebase-config.js`. Điền Project ID vào `.firebaserc`.
 
-**5. Kiểm tra danh sách email trong luật bảo mật.** Mở `firestore.rules`, hàm `staffEmails()` đã ghi sẵn 15 email ở bảng trên. Chỉ email trong danh sách mới đọc và ghi được dữ liệu. Thêm người mới trong web app thì phải thêm cả email vào đây (và vào `firebase-config.js` nếu dùng email riêng, như NS009), rồi chạy `firebase deploy --only firestore:rules`. Nếu muốn đổi đuôi email, sửa `domain` trong `public/firebase-config.js` và sửa cả danh sách trong luật.
+**5. Kiểm tra danh sách email trong luật bảo mật.** Mở `firestore.rules`, hàm `staffEmails()` đã ghi sẵn 16 email ở bảng trên. Chỉ email trong danh sách mới đọc và ghi được dữ liệu. Thêm người mới trong web app thì phải thêm cả email vào đây (và vào `firebase-config.js` nếu dùng email riêng, như NS009), rồi chạy `firebase deploy --only firestore:rules`. Nếu muốn đổi đuôi email, sửa `domain` trong `public/firebase-config.js` và sửa cả danh sách trong luật.
 
 **6. Cài công cụ và triển khai.**
 ```
@@ -169,7 +170,7 @@ Xem `deploy-github-actions.yml.example`: sao chép thành `.github/workflows/fir
 
 ## Bản 0.27.1: ba phòng làm việc riêng
 
-- Trang đăng nhập chọn phòng trước (Cơ điện vật liệu xây dựng, Kiểm định Hiệu chuẩn đo lường, Hóa sinh môi trường), rồi chọn tên. Sau đăng nhập mọi màn hình hiện theo phòng.
+- Trang đăng nhập có 5 khối: Ban Giám đốc, ba phòng chuyên môn (Cơ điện vật liệu xây dựng, Kiểm định Hiệu chuẩn đo lường, Hóa sinh môi trường), Phòng Hành chính tổng hợp; chọn khối rồi chọn tên. Sau đăng nhập mọi màn hình hiện theo phòng.
 - Dữ liệu mới nằm ở các bộ sưu tập riêng `dv_gia`, `dv_cfg`, `dv_kh`, `dvbk_<yy>`, `dvbg_<yy>`, `dv_tb` (thiết bị), `dv_cc` (giấy chứng nhận). Không đụng dữ liệu thí nghiệm cũ. Luật `firestore.rules` đã áp dụng cho mọi bộ sưu tập, không cần sửa thêm.
-- Có 4 email mới cần tạo trong Authentication: `ns014`, `ns015`, `ns016`, `ns017@ptn-vlxd.vn` (mã nhân viên tạm).
+- Có 5 email mới cần tạo trong Authentication: `ns014` đến `ns018@ptn-vlxd.vn` (mã nhân viên tạm).
 - Nhớ chạy `firebase deploy --only firestore:rules,hosting` để cập nhật cả luật và web app.
