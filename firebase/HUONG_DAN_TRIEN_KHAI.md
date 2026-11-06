@@ -1,6 +1,6 @@
 # Triển khai web app lên Firebase
 
-Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.27.3) trên Firebase Hosting, lưu dữ liệu dùng chung bằng Cloud Firestore, đăng nhập bằng Firebase Authentication. Web app tự nhận ra có Firebase (nhờ `public/fb-shim.js`) và chuyển sang đăng nhập bằng mật khẩu; không có Firebase thì vẫn chạy chế độ chọn tên như cũ.
+Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.27.4) trên Firebase Hosting, lưu dữ liệu dùng chung bằng Cloud Firestore, đăng nhập bằng Firebase Authentication. Web app tự nhận ra có Firebase (nhờ `public/fb-shim.js`) và chuyển sang đăng nhập bằng mật khẩu; không có Firebase thì vẫn chạy chế độ chọn tên như cũ.
 
 ## Gói gồm
 
@@ -180,3 +180,9 @@ Xem `deploy-github-actions.yml.example`: sao chép thành `.github/workflows/fir
 - Trang **Dịch vụ** của phòng Kiểm định hiệu chuẩn đo lường, Hóa sinh môi trường (và Cơ điện nếu có quyền lập bảng kê dịch vụ) có thêm tab **Tổng hợp thanh toán**: mã bảng kê, khách hàng, công trình/cơ sở, ngày lập, chưa thanh toán, đã thanh toán, thanh toán khoán chi. Có tìm kiếm, lọc theo tình trạng và khoảng ngày, dòng cộng, nút **Xuất Excel**.
 - Khi đề nghị thanh toán, chọn thêm hình thức **Khoán chi (đối trừ vào khoản chi)**. Thủ quỹ vẫn xác nhận như thường; khoản này tính vào cột khoán chi và trừ vào công nợ.
 - Không có collection hay quy tắc mới: deploy lại hosting là đủ, dữ liệu cũ giữ nguyên.
+
+## Bản 0.27.4: Khoán chi cho phòng Cơ điện vật liệu xây dựng
+
+- Ở trang **Thanh toán** của phòng Cơ điện, hộp thoại đề nghị thủ quỹ xác nhận có thêm hình thức **Khoán chi (đối trừ vào khoản chi)**.
+- Tab Tổng hợp thanh toán và file Excel của Cơ điện có thêm cột **Khoán chi**; cột Đã thanh toán chỉ còn phần tiền thực thu. Khoán chi vẫn trừ vào số còn lại.
+- Không đổi cấu trúc dữ liệu: deploy lại hosting là đủ.
