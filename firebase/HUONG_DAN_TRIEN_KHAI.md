@@ -38,6 +38,10 @@ Sang tab **Users**, Add user, tạo **đủ 11 người dùng** sau (mật khẩ
 | NS008 Nguyễn Tiến Hoàng | `ns008@ptn-vlxd.vn` |
 | NS012 Hồ Thị Bích Thuỷ | `ns012@ptn-vlxd.vn` |
 | NS013 Trần Hoàn | `ns013@ptn-vlxd.vn` |
+| NS014 Phan Thanh Hà (Trưởng phòng Kiểm định Hiệu chuẩn, mã tạm) | `ns014@ptn-vlxd.vn` |
+| NS015 Nguyễn Thị Cẩm Hiền (giao nhận mẫu, mã tạm) | `ns015@ptn-vlxd.vn` |
+| NS016 Giang Tấn Thông (Trưởng phòng Hóa sinh môi trường, mã tạm) | `ns016@ptn-vlxd.vn` |
+| NS017 Hoàng Thị Châu (giao nhận mẫu, mã tạm) | `ns017@ptn-vlxd.vn` |
 
 Đuôi `@ptn-vlxd.vn` chỉ là tên giả để ghép với mã nhân sự, không cần là hộp thư thật. Vì vậy nút "quên mật khẩu bằng email" không dùng được với các email này: khi ai quên mật khẩu, trưởng phòng vào Authentication, Users, bấm dấu ba chấm ở người đó, chọn Reset password (hoặc xóa người dùng rồi tạo lại). Người dùng tự đổi mật khẩu bằng nút **Đổi mật khẩu** ở thanh bên của web app.
 

@@ -22,7 +22,11 @@ service cloud.firestore {
         'ns007@ptn-vlxd.vn',          // Lê Phước Đức
         'ns008@ptn-vlxd.vn',          // Nguyễn Tiến Hoàng
         'ns012@ptn-vlxd.vn',          // Hồ Thị Bích Thuỷ
-        'ns013@ptn-vlxd.vn'           // Trần Hoàn
+        'ns013@ptn-vlxd.vn',          // Trần Hoàn
+        'ns014@ptn-vlxd.vn',          // Phan Thanh Hà (mã tạm)
+        'ns015@ptn-vlxd.vn',          // Nguyễn Thị Cẩm Hiền (mã tạm)
+        'ns016@ptn-vlxd.vn',          // Giang Tấn Thông (mã tạm)
+        'ns017@ptn-vlxd.vn'           // Hoàng Thị Châu (mã tạm)
       ];
     }
 
