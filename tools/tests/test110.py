@@ -25,8 +25,9 @@ async def main():
         await page.goto('file://'+HTML)
         await page.wait_for_function('window.__ptn && window.__ptn.db === true',timeout=15000)
         ev=lambda js,a=None: page.evaluate(js,a)
+        ROOM={'NS012':'kd','NS013':'kd','NS009':'co'}
         async def login(i):
-            await ev("(id)=>{window.__ptn.setSession(id);location.hash='tong-quan';}",i);await page.wait_for_timeout(300)
+            await ev("([id,r])=>{window.__ptn.setSession(id);if(r)window.__ptn.setWroom(r);location.hash='tong-quan';}",[i,ROOM.get(i)]);await page.wait_for_timeout(300)
             await ev("()=>{location.hash='dich-vu'}");await page.wait_for_timeout(500)
         # --- bảng giá nhúng sẵn
         await login('NS015')
@@ -51,7 +52,7 @@ async def main():
         chk(len(d['dong'])==2,'2 dòng, có %d'%len(d['dong']))
         chk(all(x['khoa'] for x in d['dong']),'giá khóa')
         T=await ev("()=>window.__ptn.dvTotals(window.__ptn.DVS.draft)")
-        chk(T['tong']==850000 and T['thue']==85000 and T['tt']==935000,'tổng %s'%T)
+        chk(T['tong']==850000 and T['vat']==0 and T['thue']==0 and T['tt']==850000,'tổng %s'%T)
         # khóa: ô đơn giá bị khóa
         chk(await L('input[aria-label^="Đơn giá dòng"]').count()==0 and await L('[data-act="dv-unlock"]').count()==0,'đơn giá khóa, nhân viên không mở khóa được')
         await page.screenshot(path='/tmp/claude-0/-home-claude/c64f2c08-0025-5f29-8403-f78a9d20d6b8/scratchpad/s_editor.png',full_page=True)
@@ -94,16 +95,16 @@ async def main():
         await ev("""async()=>{const P=window.__ptn;const b=P.dvAllBk()[0];await P.dvAct(b,'Đề nghị thanh toán','',d=>{d.pay.push({id:'p1',ngay:'2026-11-06',so_tien:500000,ht:'ck',tt:'cho_tq'});});}""")
         await page.wait_for_timeout(300)
         P1=await ev("()=>window.__ptn.dvPay(window.__ptn.dvAllBk()[0])")
-        chk(P1['cho']==500000 and P1['da']==0 and P1['con']==935000,'pay chờ %s'%P1)
+        chk(P1['cho']==500000 and P1['da']==0 and P1['con']==850000,'pay chờ %s'%P1)
         await login('NS012')
         await ev("""async()=>{const P=window.__ptn;const b=P.dvAllBk()[0];await P.dvAct(b,'xn','',d=>{d.pay[0].tt='da_xn';d.pay[0].ngay_xn='2026-11-06';});}""")
         await page.wait_for_timeout(300)
         P2=await ev("()=>window.__ptn.dvPay(window.__ptn.dvAllBk()[0])")
-        chk(P2['da']==500000 and P2['con']==435000 and P2['st']=='mot','pay một phần %s'%P2)
+        chk(P2['da']==500000 and P2['con']==350000 and P2['st']=='mot','pay một phần %s'%P2)
         dd=await ev("()=>window.__ptn.dvDebtData('kd').map(e=>[e.ten,e.con])")
-        chk(dd==[['Công ty CP Điện Quảng Bình',435000]],'công nợ %s'%dd)
+        chk(dd==[['Công ty CP Điện Quảng Bình',350000]],'công nợ %s'%dd)
         await ev("()=>{location.hash='dich-vu'}");await go('no');
-        chk('435.000' in (await page.content()),'hiển thị công nợ')
+        chk('350.000' in (await page.content()),'hiển thị công nợ')
         # không đụng bangke_ / samples_
         keys=await ev("()=>Object.keys(window.__fake.dump?window.__fake.dump():{})")
         print('keys',[k for k in keys][:20])
