@@ -205,6 +205,8 @@ td.r,th.r{text-align:right}
 .lg-hc{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:16px;padding:clamp(18px,3vw,40px) clamp(18px,4vw,56px) clamp(22px,4.4vh,48px)}
 .lg h1{margin:0;font-size:clamp(28px,3.5vw,48px);line-height:1.06;letter-spacing:-.03em;font-weight:700;color:#fff;text-wrap:balance;text-shadow:0 2px 24px rgba(0,16,34,.6)}
 .lg h1 em{text-shadow:none;filter:drop-shadow(0 2px 14px rgba(0,16,34,.65));font-style:normal;background:linear-gradient(90deg,#8FD3FF,#6FF0D6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lg-room{align-self:flex-start;display:none;padding:7px 16px;border-radius:999px;background:linear-gradient(90deg,rgba(143,211,255,.28),rgba(111,240,214,.28));border:1px solid rgba(143,211,255,.55);color:#fff;font-weight:600;font-size:clamp(14px,1.5vw,18px);text-shadow:0 1px 10px rgba(0,16,34,.6);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.lg-room.on{display:inline-block}
 .lg-steps{display:flex;flex-wrap:wrap;gap:8px}
 .lg-step{display:inline-flex;align-items:center;gap:9px;padding:8px 15px 8px 12px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#fff;font-weight:600;font-size:13.5px;white-space:nowrap}
 .lg-step i{font:600 11.5px var(--f-mono);font-style:normal;color:#8FD3FF;letter-spacing:.04em}
@@ -2613,16 +2615,19 @@ const logoMark=()=>h('div',{class:'brand-mark logo'},h('img',{src:LOGO_S,alt:LOG
 try{const lk=document.createElement('link');lk.rel='icon';lk.type='image/webp';lk.href=LOGO_S;document.head.append(lk);}catch(e){}
 const lgAv=name=>{const p=String(name).trim().split(/\s+/),ini=(p.length>1?p[p.length-2].charAt(0)+p[p.length-1].charAt(0):p[0].slice(0,2)).toUpperCase();let k=0;for(const c of String(name))k=(k*31+c.charCodeAt(0))%6;return{ini,hue:[205,172,262,28,340,145][k]};};
 pages['dang-nhap']={public:true,render(root){
-  const groups=[['Điều hành',ACCOUNTS.filter(a=>a.roles.some(r=>['tp','pd'].includes(r)))],['Tiếp nhận, soát xét',ACCOUNTS.filter(a=>!a.roles.some(r=>['tp','pd','tn'].includes(r))&&a.roles.some(r=>['tiepnhan','sx'].includes(r)))],['Cán bộ thử nghiệm, giao nhận mẫu',ACCOUNTS.filter(a=>a.roles.includes('tn')&&!a.roles.some(r=>['tp','pd'].includes(r)))],['Thủ quỹ, kế toán trưởng',ACCOUNTS.filter(a=>a.roles.some(r=>['tq','ktt'].includes(r)))]];
+  const LG_ROOMS=[['co','Phòng thử nghiệm Cơ điện vật liệu xây dựng',['NS009','NS011','NS001','NS002','NS003','NS004','NS007','NS008']],['kd','Phòng Kiểm định Hiệu chuẩn đo lường',['NS014','NS015']],['hs','Phòng thử nghiệm Hóa sinh môi trường',['NS016','NS017']],['dh','Ban Giám đốc, Thủ quỹ, Kế toán trưởng',['NS010','NS012','NS013']]];
+  const groups=LG_ROOMS.map(([k,t,ids])=>[t,ids.map(id=>ACCOUNTS.find(a=>a.id===id)).filter(Boolean)]);
+  const roomTag=h('div',{class:'lg-room','aria-live':'polite'},h('span',null,'Chọn phòng ở khung bên phải'));
+  let roomPick='';const roomShow=t=>{roomTag.replaceChildren(h('span',null,t||roomPick||'Chọn phòng ở khung bên phải'));roomTag.classList.toggle('on',!!(t||roomPick));};
   const tiles=[],empty=h('p',{class:'lg-empty',hidden:true},'Không có tài khoản khớp từ khóa.');
   const q=h('input',{type:'search',class:'lg-search',placeholder:'Tìm theo tên hoặc chức danh','aria-label':'Tìm tài khoản',autocomplete:'off',spellcheck:'false'});
   const secs=groups.map(([t,list])=>{
     const grid=h('div',{class:'acc-grid'},list.map(a=>{const v=lgAv(a.name);
-      const b=h('button',{class:'acc',type:'button','aria-label':'Đăng nhập: '+a.name+', '+a.title,onclick:()=>{if(window.__fbLogin){fbPwDlg(a);return;}SESSION=a;saveSession();location.hash=defaultPage();render();}},
+      const b=h('button',{class:'acc',type:'button','aria-label':'Đăng nhập: '+a.name+', '+a.title,onmouseenter:()=>roomShow(t),onfocus:()=>roomShow(t),onclick:()=>{roomPick=t;roomShow();if(window.__fbLogin){fbPwDlg(a);return;}SESSION=a;saveSession();location.hash=defaultPage();render();}},
         h('i',{class:'lg-av','aria-hidden':'true',style:'background:hsl('+v.hue+' 75% 91%);color:hsl('+v.hue+' 65% 26%)'},v.ini),
         h('span',{class:'lg-tx'},h('b',null,a.name),h('span',{class:'lg-ti'},a.title),h('span',{class:'lg-rl'},a.roles.slice(0,2).map(r=>h('em',null,ROLE_NAME[r])),a.roles.length>2?h('em',{class:'more',title:a.roles.slice(2).map(r=>ROLE_NAME[r]).join(', ')},'+'+(a.roles.length-2)):null)));
       tiles.push([b,bkNorm(a.name+' '+a.title+' '+a.roles.map(r=>ROLE_NAME[r]).join(' '))]);return b;}));
-    return h('section',{class:'lg-grp'},h('h3',null,t),grid);});
+    return h('section',{class:'lg-grp',onmouseenter:()=>roomShow(t)},h('h3',null,t),grid);});
   q.addEventListener('input',()=>{const k=bkNorm(q.value);let n=0;tiles.forEach(([b,t])=>{const on=!k||t.includes(k);b.hidden=!on;if(on)n++;});
     secs.forEach(s=>{s.hidden=!Array.from(s.querySelectorAll('.acc')).some(b=>!b.hidden);});empty.hidden=n>0;});
   const step=(n,t)=>h('span',{class:'lg-step'},h('i',null,n),t);
@@ -2632,6 +2637,7 @@ pages['dang-nhap']={public:true,render(root){
       h('div',{class:'lg-scrim','aria-hidden':'true'}),
       h('div',{class:'lg-brand'},h('img',{class:'lg-logo',src:LOGO_L,alt:LOGO_ALT,width:72,height:72}),h('div',null,h('small',null,'Trung tâm Kỹ thuật Tiêu chuẩn Đo lường Chất lượng'),h('b',null,'Quảng Trị'))),
       h('div',{class:'lg-hc'},
+        roomTag,
         h('h1',null,'Phòng thí nghiệm ',h('em',null,'chuyên ngành xây dựng')),
         h('div',{class:'lg-steps'},step('01','Nhận mẫu'),step('02','Thử nghiệm'),step('03','Phát hành'),step('04','Thanh toán')))),
     h('div',{class:'lg-side'},
