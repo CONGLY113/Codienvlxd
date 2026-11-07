@@ -28,23 +28,23 @@ Sang tab **Users**, Add user, tạo **đủ 16 người dùng** sau (mật khẩ
 | Tài khoản trong web app | Email tạo ở Firebase |
 |---|---|
 | NS009 Hoàng Công Lý | `hcly113@gmail.com` |
-| NS010 Lưu Minh Tuấn | `ns010@ptn.local` |
-| NS011 Nguyễn Thị Bích Lan | `ns011@ptn.local` |
-| NS002 Trần Đăng Hùng | `ns002@ptn.local` |
-| NS001 Nguyễn Văn Sự | `ns001@ptn.local` |
-| NS003 Nguyễn Mậu Thiện | `ns003@ptn.local` |
-| NS004 Trần Anh Dũng | `ns004@ptn.local` |
-| NS007 Lê Phước Đức | `ns007@ptn.local` |
-| NS008 Nguyễn Tiến Hoàng | `ns008@ptn.local` |
-| NS012 Hồ Thị Bích Thuỷ | `ns012@ptn.local` |
-| NS013 Trần Hoàn | `ns013@ptn.local` |
-| NS014 Phan Thanh Hà (Trưởng phòng Kiểm định Hiệu chuẩn, mã tạm) | `ns014@ptn.local` |
-| NS015 Nguyễn Thị Cẩm Hiền (giao nhận mẫu, mã tạm) | `ns015@ptn.local` |
-| NS016 Giang Tấn Thông (Trưởng phòng Hóa sinh môi trường, mã tạm) | `ns016@ptn.local` |
-| NS017 Hoàng Thị Châu (giao nhận mẫu, mã tạm) | `ns017@ptn.local` |
-| NS018 Phan Thanh Giàn (Phó giám đốc, mã tạm) | `ns018@ptn.local` |
+| NS010 Lưu Minh Tuấn | `ns010@ptn-vlxd.vn` |
+| NS011 Nguyễn Thị Bích Lan | `ns011@ptn-vlxd.vn` |
+| NS002 Trần Đăng Hùng | `ns002@ptn-vlxd.vn` |
+| NS001 Nguyễn Văn Sự | `ns001@ptn-vlxd.vn` |
+| NS003 Nguyễn Mậu Thiện | `ns003@ptn-vlxd.vn` |
+| NS004 Trần Anh Dũng | `ns004@ptn-vlxd.vn` |
+| NS007 Lê Phước Đức | `ns007@ptn-vlxd.vn` |
+| NS008 Nguyễn Tiến Hoàng | `ns008@ptn-vlxd.vn` |
+| NS012 Hồ Thị Bích Thuỷ | `ns012@ptn-vlxd.vn` |
+| NS013 Trần Hoàn | `ns013@ptn-vlxd.vn` |
+| NS014 Phan Thanh Hà (Trưởng phòng Kiểm định Hiệu chuẩn, mã tạm) | `ns014@ptn-vlxd.vn` |
+| NS015 Nguyễn Thị Cẩm Hiền (giao nhận mẫu, mã tạm) | `ns015@ptn-vlxd.vn` |
+| NS016 Giang Tấn Thông (Trưởng phòng Hóa sinh môi trường, mã tạm) | `ns016@ptn-vlxd.vn` |
+| NS017 Hoàng Thị Châu (giao nhận mẫu, mã tạm) | `ns017@ptn-vlxd.vn` |
+| NS018 Phan Thanh Giàn (Phó giám đốc, mã tạm) | `ns018@ptn-vlxd.vn` |
 
-Đuôi `@ptn.local` chỉ là tên giả để ghép với mã nhân sự, không cần là hộp thư thật. Vì vậy nút "quên mật khẩu bằng email" không dùng được với các email này: khi ai quên mật khẩu, trưởng phòng vào Authentication, Users, bấm dấu ba chấm ở người đó, chọn Reset password (hoặc xóa người dùng rồi tạo lại). Người dùng tự đổi mật khẩu bằng nút **Đổi mật khẩu** ở thanh bên của web app.
+Đuôi `@ptn-vlxd.vn` chỉ là tên giả để ghép với mã nhân sự, không cần là hộp thư thật. Vì vậy nút "quên mật khẩu bằng email" không dùng được với các email này: khi ai quên mật khẩu, trưởng phòng vào Authentication, Users, bấm dấu ba chấm ở người đó, chọn Reset password (hoặc xóa người dùng rồi tạo lại). Người dùng tự đổi mật khẩu bằng nút **Đổi mật khẩu** ở thanh bên của web app.
 
 **Bắt buộc: tắt cho phép tự đăng ký.** Authentication, Settings, User actions, bỏ chọn **Enable create (sign-up)**, bấm Save. Nếu không, người lạ có thể tự đăng ký đúng một email trong danh sách mà anh chưa tạo và vào được hệ thống.
 
@@ -172,7 +172,7 @@ Xem `deploy-github-actions.yml.example`: sao chép thành `.github/workflows/fir
 
 - Trang đăng nhập có 5 khối: Ban Giám đốc, ba phòng chuyên môn (Cơ điện vật liệu xây dựng, Kiểm định Hiệu chuẩn đo lường, Hóa sinh môi trường), Phòng Hành chính tổng hợp; chọn khối rồi chọn tên. Sau đăng nhập mọi màn hình hiện theo phòng.
 - Dữ liệu mới nằm ở các bộ sưu tập riêng `dv_gia`, `dv_cfg`, `dv_kh`, `dvbk_<yy>`, `dvbg_<yy>`, `dv_tb` (thiết bị), `dv_cc` (giấy chứng nhận). Không đụng dữ liệu thí nghiệm cũ. Luật `firestore.rules` đã áp dụng cho mọi bộ sưu tập, không cần sửa thêm.
-- Có 5 email mới cần tạo trong Authentication: `ns014` đến `ns018@ptn.local` (mã nhân viên tạm).
+- Có 5 email mới cần tạo trong Authentication: `ns014` đến `ns018@ptn-vlxd.vn` (mã nhân viên tạm).
 - Nhớ chạy `firebase deploy --only firestore:rules,hosting` để cập nhật cả luật và web app.
 
 ## Bản 0.27.3: Tổng hợp thanh toán và Khoán chi
@@ -187,8 +187,8 @@ Xem `deploy-github-actions.yml.example`: sao chép thành `.github/workflows/fir
 - Tab Tổng hợp thanh toán và file Excel của Cơ điện có thêm cột **Khoán chi**; cột Đã thanh toán chỉ còn phần tiền thực thu. Khoán chi vẫn trừ vào số còn lại.
 - Không đổi cấu trúc dữ liệu: deploy lại hosting là đủ.
 
-## Sửa lỗi đăng nhập "chưa được tạo trên Firebase" (bản 0.27.4 sửa đăng nhập)
+## Danh sách email đăng nhập đã chốt (bản 0.27.4)
 
-- Dự án Firebase đã dùng từ bản 0.25.0 tạo tài khoản theo đuôi **@ptn.local** (ví dụ `ns013@ptn.local`). Gói cũ lại mặc định đuôi `@ptn-vlxd.vn` nên không tìm thấy người dùng. Nay đuôi mặc định là `@ptn.local`, đuôi `@ptn-vlxd.vn` vẫn được thử khi đuôi chính không đúng, và `firestore.rules` chấp nhận cả hai.
-- Người mới **NS014, NS015, NS016, NS017, NS018** chưa có trong Authentication: vào Firebase Console > Authentication > Users > Add user, tạo email `ns014@ptn.local` ... `ns018@ptn.local` kèm mật khẩu.
-- Sau khi sửa file, chạy: `firebase deploy --only hosting,firestore:rules`.
+Mọi tài khoản dùng đuôi **@ptn-vlxd.vn**, riêng NS009 dùng `hcly113@gmail.com`. Phải tạo đủ 16 người dùng này ở Firebase Console > Authentication > Users (mật khẩu do trưởng phòng đặt). Tài khoản cũ đuôi `@ptn.local` không còn được chấp nhận ở đăng nhập và ở `firestore.rules`.
+
+Sau khi sửa file, chạy: `firebase deploy --only hosting,firestore:rules`.

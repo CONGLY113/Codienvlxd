@@ -13,8 +13,7 @@ window.FIREBASE_CONFIG={
    Mặc định email = <mã nhân sự viết thường>@<domain>, trừ các tài khoản ghi riêng ở "emails".
    Nếu sửa ở đây thì sửa cả danh sách staffEmails() trong firestore.rules cho khớp. */
 window.FIREBASE_LOGIN={
-  domain:"ptn.local",
-  altDomains:["ptn-vlxd.vn"],
+  domain:"ptn-vlxd.vn",
   emails:{ NS009:"hcly113@gmail.com" }
 };
 

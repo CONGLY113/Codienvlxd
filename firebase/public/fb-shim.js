@@ -9,7 +9,7 @@
   var SDK='https://www.gstatic.com/firebasejs/10.14.1/';
   var cfg=window.FIREBASE_CONFIG||{};
   var L=window.FIREBASE_LOGIN||{};
-  var DOMAIN=String(L.domain||'ptn.local').toLowerCase();
+  var DOMAIN=String(L.domain||'ptn-vlxd.vn').toLowerCase();
   var ALT=(L.altDomains||[]).map(function(d){return String(d).toLowerCase();});
   var EMAILS=L.emails||{};
   var state={db:null,ok:false};
