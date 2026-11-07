@@ -9,7 +9,8 @@
   var SDK='https://www.gstatic.com/firebasejs/10.14.1/';
   var cfg=window.FIREBASE_CONFIG||{};
   var L=window.FIREBASE_LOGIN||{};
-  var DOMAIN=String(L.domain||'ptn-vlxd.vn').toLowerCase();
+  var DOMAIN=String(L.domain||'ptn.local').toLowerCase();
+  var ALT=(L.altDomains||[]).map(function(d){return String(d).toLowerCase();});
   var EMAILS=L.emails||{};
   var state={db:null,ok:false};
   var configured=cfg.apiKey&&cfg.projectId&&!/^(DIEN|YOUR|XXXX)/i.test(cfg.apiKey);
@@ -20,7 +21,7 @@
     email=String(email||'').toLowerCase();
     for(var k in EMAILS){if(String(EMAILS[k]).toLowerCase()===email)return k;}
     var m=/^(ns\d+)@(.+)$/.exec(email);
-    return (m&&m[2]===DOMAIN)?m[1].toUpperCase():null;
+    return (m&&(m[2]===DOMAIN||ALT.indexOf(m[2])>=0))?m[1].toUpperCase():null;
   }
   function setSess(id){try{if(id)localStorage.setItem('ptn_session',id);else localStorage.removeItem('ptn_session');}catch(e){}}
   function banner(t){var d=document.createElement('div');d.setAttribute('style','position:fixed;left:0;right:0;top:0;z-index:9999;background:#FFF4D6;color:#5A3E00;padding:10px 14px;font:14px system-ui;text-align:center');d.textContent=t;document.body.append(d);}
@@ -93,7 +94,11 @@
 
       /* đăng nhập theo tên tài khoản trong danh sách web app + mật khẩu tạo ở Firebase */
       window.__fbLogin=function(id,pw){
-        return U.signInWithEmailAndPassword(auth,emailOf(id),pw).then(function(){setSess(id);return {ok:true};},function(e){return {ok:false,msg:viErr(e)};});};
+        var tries=[emailOf(id)];if(!EMAILS[id])ALT.forEach(function(d){tries.push(String(id).toLowerCase()+'@'+d);});
+        var run=function(i){return U.signInWithEmailAndPassword(auth,tries[i],pw).then(function(){setSess(id);return {ok:true};},function(e){
+          if(i+1<tries.length&&/invalid-credential|wrong-password|invalid-login|user-not-found/.test((e&&e.code)||''))return run(i+1);
+          return {ok:false,msg:viErr(e)};});};
+        return run(0);};
       window.__fbSignOut=function(){setSess(null);return U.signOut(auth);};
 
       /* thông báo đẩy nền (tùy chọn): lấy mã thiết bị của Firebase Cloud Messaging và lưu ở fcm_tokens/<mã nhân sự> */

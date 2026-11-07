@@ -5,7 +5,7 @@ service cloud.firestore {
     // ===== DANH SÁCH EMAIL ĐƯỢC VÀO HỆ THỐNG (nhân viên) =====
     // Mỗi tài khoản trong danh sách của web app có một email trong Firebase:
     //   - NS009 (Hoàng Công Lý)  dùng email thật: hcly113@gmail.com
-    //   - các tài khoản khác dùng  <mã nhân sự viết thường>@ptn-vlxd.vn  (ví dụ ns002@ptn-vlxd.vn)
+    //   - các tài khoản khác dùng  <mã nhân sự viết thường>@ptn.local  (ví dụ ns002@ptn.local); đuôi cũ @ptn-vlxd.vn cũng được chấp nhận
     // Phải tạo ĐỦ các người dùng này ở Firebase Console > Authentication > Users (mật khẩu do trưởng phòng đặt)
     // và TẮT cho phép tự đăng ký (Authentication > Settings > User actions > bỏ "Enable create (sign-up)").
     // Muốn bớt hoặc thêm người: sửa danh sách rồi chạy: firebase deploy --only firestore:rules
@@ -13,21 +13,36 @@ service cloud.firestore {
     function staffEmails() {
       return [
         'hcly113@gmail.com',          // NS009 Hoàng Công Lý
-        'ns010@ptn-vlxd.vn',          // Lưu Minh Tuấn
-        'ns011@ptn-vlxd.vn',          // Nguyễn Thị Bích Lan
-        'ns002@ptn-vlxd.vn',          // Trần Đăng Hùng
-        'ns001@ptn-vlxd.vn',          // Nguyễn Văn Sự
-        'ns003@ptn-vlxd.vn',          // Nguyễn Mậu Thiện
-        'ns004@ptn-vlxd.vn',          // Trần Anh Dũng
-        'ns007@ptn-vlxd.vn',          // Lê Phước Đức
-        'ns008@ptn-vlxd.vn',          // Nguyễn Tiến Hoàng
-        'ns012@ptn-vlxd.vn',          // Hồ Thị Bích Thuỷ
-        'ns013@ptn-vlxd.vn',          // Trần Hoàn
-        'ns014@ptn-vlxd.vn',          // Phan Thanh Hà (mã tạm)
-        'ns015@ptn-vlxd.vn',          // Nguyễn Thị Cẩm Hiền (mã tạm)
-        'ns016@ptn-vlxd.vn',          // Giang Tấn Thông (mã tạm)
-        'ns017@ptn-vlxd.vn',          // Hoàng Thị Châu (mã tạm)
-        'ns018@ptn-vlxd.vn'           // Phan Thanh Giàn, Phó giám đốc (mã tạm)
+        'ns010@ptn.local',          // Lưu Minh Tuấn
+        'ns010@ptn-vlxd.vn',
+        'ns011@ptn.local',          // Nguyễn Thị Bích Lan
+        'ns011@ptn-vlxd.vn',
+        'ns002@ptn.local',          // Trần Đăng Hùng
+        'ns002@ptn-vlxd.vn',
+        'ns001@ptn.local',          // Nguyễn Văn Sự
+        'ns001@ptn-vlxd.vn',
+        'ns003@ptn.local',          // Nguyễn Mậu Thiện
+        'ns003@ptn-vlxd.vn',
+        'ns004@ptn.local',          // Trần Anh Dũng
+        'ns004@ptn-vlxd.vn',
+        'ns007@ptn.local',          // Lê Phước Đức
+        'ns007@ptn-vlxd.vn',
+        'ns008@ptn.local',          // Nguyễn Tiến Hoàng
+        'ns008@ptn-vlxd.vn',
+        'ns012@ptn.local',          // Hồ Thị Bích Thuỷ
+        'ns012@ptn-vlxd.vn',
+        'ns013@ptn.local',          // Trần Hoàn
+        'ns013@ptn-vlxd.vn',
+        'ns014@ptn.local',          // Phan Thanh Hà (mã tạm)
+        'ns014@ptn-vlxd.vn',
+        'ns015@ptn.local',          // Nguyễn Thị Cẩm Hiền (mã tạm)
+        'ns015@ptn-vlxd.vn',
+        'ns016@ptn.local',          // Giang Tấn Thông (mã tạm)
+        'ns016@ptn-vlxd.vn',
+        'ns017@ptn.local',          // Hoàng Thị Châu (mã tạm)
+        'ns017@ptn-vlxd.vn',
+        'ns018@ptn.local',           // Phan Thanh Giàn, Phó giám đốc (mã tạm)
+        'ns018@ptn-vlxd.vn'
       ];
     }
 
