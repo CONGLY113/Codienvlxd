@@ -1,6 +1,6 @@
 # Triển khai web app lên Firebase
 
-Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.27.4) trên Firebase Hosting, lưu dữ liệu dùng chung bằng Cloud Firestore, đăng nhập bằng Firebase Authentication. Web app tự nhận ra có Firebase (nhờ `public/fb-shim.js`) và chuyển sang đăng nhập bằng mật khẩu; không có Firebase thì vẫn chạy chế độ chọn tên như cũ.
+Gói này chạy web app **Quản lý mẫu thử nghiệm** (bản 0.27.5) trên Firebase Hosting, lưu dữ liệu dùng chung bằng Cloud Firestore, đăng nhập bằng Firebase Authentication. Web app tự nhận ra có Firebase (nhờ `public/fb-shim.js`) và chuyển sang đăng nhập bằng mật khẩu; không có Firebase thì vẫn chạy chế độ chọn tên như cũ.
 
 ## Gói gồm
 
@@ -192,3 +192,7 @@ Xem `deploy-github-actions.yml.example`: sao chép thành `.github/workflows/fir
 Mọi tài khoản dùng đuôi **@ptn-vlxd.vn**, riêng NS009 dùng `hcly113@gmail.com`. Phải tạo đủ 16 người dùng này ở Firebase Console > Authentication > Users (mật khẩu do trưởng phòng đặt). Tài khoản cũ đuôi `@ptn.local` không còn được chấp nhận ở đăng nhập và ở `firestore.rules`.
 
 Sau khi sửa file, chạy: `firebase deploy --only hosting,firestore:rules`.
+
+## Bản 0.27.5: phân quyền Phó giám đốc
+
+NS018 Phan Thanh Giàn có vai trò riêng chỉ xem thanh toán: thấy Bảng kê và báo giá của ba phòng (bảng kê, công nợ, tổng hợp thanh toán) và mục Thanh toán của Cơ điện; không có Soát xét phê duyệt, Sửa đổi phiếu, Thiết bị, Hồ sơ lưu trữ và không ký duyệt bảng kê. Không đổi Firestore: chỉ deploy lại hosting. Phân quyền này chặn ở giao diện, còn `firestore.rules` vẫn cho mọi nhân viên đọc ghi.
