@@ -2159,6 +2159,46 @@ async function patchPhieuCommon(zip,sample,extra){
   const ser=d=>{let x=new XMLSerializer().serializeToString(d);return /^<\?xml/.test(x)?x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'+x;};
   zip.file(p,ser(doc));zip.file('xl/styles.xml',ser(stDoc));
 }
+
+/* ===== 0.27.6 Sheet So_lieu: gợi ý giá trị đo ở các ô nhập (hộp nhắc khi chọn ô, không chặn nhập) ===== */
+const SL_EX=[[/^g$/i,'500,0'],[/^kg$/i,'5,00'],[/^mg$/i,'250'],[/^mm$/i,'40,00'],[/^cm$/i,'15,0'],[/^m$/i,'1,00'],[/^kn$/i,'150,0'],[/^n$/i,'1500'],[/^mpa$/i,'25,0'],[/^n\/mm/i,'400'],[/^daN\/cm/i,'300'],[/^%/,'2,5'],[/^phút/i,'120'],[/^giờ/i,'24'],[/^°c/i,'27'],[/^cm(³|3)$/i,'100,0'],[/^ml$/i,'250'],[/^l$|^lít$/i,'1,00'],[/^g\/cm/i,'2,65'],[/^kg\/m/i,'1450'],[/^1\/10 ?mm/i,'65'],[/^s(ec)?$|^giây/i,'45']];
+async function patchSoLieuHints(zip){
+  const p='xl/worksheets/sheet2.xml',sf=zip.file(p),stF=zip.file('xl/styles.xml');if(!sf||!stF)return;
+  const P=new DOMParser(),doc=P.parseFromString(await sf.async('string'),'application/xml'),sd=doc.getElementsByTagName('sheetData')[0];if(!sd)return;
+  const stDoc=P.parseFromString(await stF.async('string'),'application/xml'),fills=Array.from((stDoc.getElementsByTagName('fills')[0]||{children:[]}).children),xfs=Array.from((stDoc.getElementsByTagName('cellXfs')[0]||{children:[]}).children);
+  const fillRgb=i=>{const f=fills[i];const fg=f&&f.getElementsByTagName('fgColor')[0];return fg?String(fg.getAttribute('rgb')||'').toUpperCase():'';};
+  const kind=s=>{const x=xfs[s];if(!x)return'';const r=fillRgb(+x.getAttribute('fillId')||0);return r.endsWith('FFF2CC')?'in':r.endsWith('DDEBF7')?'head':'';};
+  let sst=[];const ssf=zip.file('xl/sharedStrings.xml');
+  if(ssf){const sx=P.parseFromString(await ssf.async('string'),'application/xml');sst=Array.from(sx.getElementsByTagName('si')).map(si=>Array.from(si.getElementsByTagName('t')).map(t=>t.textContent).join(''));}
+  const txt=c=>{const t=c.getAttribute('t');if(t==='inlineStr')return Array.from(c.getElementsByTagName('t')).map(x=>x.textContent).join('');const v=c.getElementsByTagName('v')[0];if(t==='s'&&v)return sst[+v.textContent]||'';if(c.getElementsByTagName('f')[0])return'';return v?v.textContent:'';};
+  const colL=ref=>(ref.match(/^[A-Z]+/)||[''])[0],rowN=ref=>+(ref.match(/\d+/)||[0])[0];
+  const grid={},ins=[];
+  Array.from(doc.getElementsByTagName('c')).forEach(c=>{const r=c.getAttribute('r'),k=kind(+c.getAttribute('s')||0);grid[r]={t:txt(c).trim(),k};if(k==='in')ins.push(r);});
+  if(!ins.length)return;
+  const dv0=doc.getElementsByTagName('dataValidations')[0],taken=new Set(),colN=L=>L.split('').reduce((n,ch)=>n*26+ch.charCodeAt(0)-64,0),colS=n=>{let t='';while(n>0){const m=(n-1)%26;t=String.fromCharCode(65+m)+t;n=Math.floor((n-1)/26);}return t;};
+  if(dv0)Array.from(dv0.getElementsByTagName('dataValidation')).forEach(d=>String(d.getAttribute('sqref')||'').split(/\s+/).forEach(t=>{const q=/^([A-Z]+)(\d+)(?::([A-Z]+)(\d+))?$/.exec(t);if(!q)return;
+    const c1=colN(q[1]),c2=q[3]?colN(q[3]):c1,r1=+q[2],r2=q[4]?+q[4]:r1;for(let c=c1;c<=c2&&c-c1<60;c++)for(let r=r1;r<=r2&&r-r1<400;r++)taken.add(colS(c)+r);}));
+  const known=u=>SL_EX.some(e=>e[0].test(u)),unitIn=s=>{const m=/\(([^()]+)\)/.exec(s||'');return m&&known(m[1].trim())?m[1].trim():'';};
+  const isSec=t=>/^(\d+[.)]|[A-ZĐ]\.)\s/.test(t);
+  const by={};
+  ins.filter(ref=>!taken.has(ref)).forEach(ref=>{const col=colL(ref),n=rowN(ref);
+    let head='';for(let r=n-1;r>=1&&r>=n-80;r--){const g=grid[col+r],a=grid['A'+r];if(g&&g.k==='head'&&g.t){head=g.t;break;}if(a&&a.t&&isSec(a.t)&&a.k==='')break;}
+    const lab=(grid['A'+n]||{}).t||'';let unit=unitIn(head)||unitIn(lab);
+    if(!unit)for(const L of ['F','E','G','D']){const g=grid[L+n];if(g&&g.k===''&&g.t&&known(g.t)){unit=g.t;break;}}
+    const ex=(SL_EX.find(e=>e[0].test(unit))||[])[1],lim=/^Yêu cầu/i.test(head);
+    const what=[lab,head].filter((x,i,a)=>x&&a.indexOf(x)===i).join(' — ')||'Số đo';
+    const prompt=(what+'. '+(lim?'Nhập mức yêu cầu của chỉ tiêu theo tiêu chuẩn':'Nhập số đo thực tế')+(unit?' (đơn vị: '+unit+')':'')+(ex&&!lim?'. Ví dụ: '+ex:'')+'. Ô xám, xanh lá tự tính, không sửa.').slice(0,250);
+    const title=(head||lab||'Số đo').replace(/\s*\([^)]*\)\s*$/,'').slice(0,32);
+    (by[title+'\u0001'+prompt]=by[title+'\u0001'+prompt]||[]).push(ref);});
+  const dvs=dv0||doc.createElementNS(NS_X,'dataValidations');let cnt=dv0?dv0.getElementsByTagName('dataValidation').length:0;
+  Object.keys(by).forEach(k=>{const [title,prompt]=k.split('\u0001'),d=doc.createElementNS(NS_X,'dataValidation');
+    d.setAttribute('allowBlank','1');d.setAttribute('showInputMessage','1');d.setAttribute('promptTitle',title);d.setAttribute('prompt',prompt);d.setAttribute('sqref',by[k].join(' '));dvs.appendChild(d);cnt++;});
+  dvs.setAttribute('count',String(cnt));
+  if(!dv0){const after=['hyperlinks','printOptions','pageMargins','pageSetup','headerFooter','rowBreaks','colBreaks','customProperties','cellWatches','ignoredErrors','smartTags','drawing','legacyDrawing','legacyDrawingHF','picture','oleObjects','controls','webPublishItems','tableParts','extLst'];
+  let ref=null;for(const nm of after){const e=doc.getElementsByTagName(nm)[0];if(e&&e.parentNode===doc.documentElement){ref=e;break;}}
+  if(ref)doc.documentElement.insertBefore(dvs,ref);else doc.documentElement.appendChild(dvs);}
+  let x=new XMLSerializer().serializeToString(doc);if(!/^<\?xml/.test(x))x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'+x;zip.file(p,x);
+}
 async function buildTemplate(sample,tester,form,extra){
   if(!window.JSZip)throw new Error('Chưa tải được thư viện nén (JSZip).');
   const zip=await JSZip.loadAsync(b64ToU8(activeB64(loaiOf(sample))));await applyMau(zip,tester);await fitRows(zip,sample);
@@ -2194,6 +2234,7 @@ async function buildTemplate(sample,tester,form,extra){
     kstr('B7','Nhiệt độ, độ ẩm phòng thử: không yêu cầu');kstr('D7','Không áp dụng');
     const c7=kc('C7');if(c7){kclr(c7);c7.setAttribute('t','str');const f=kd.createElementNS(NS_X,'f'),v=kd.createElementNS(NS_X,'v');f.textContent='"OK"';v.textContent='OK';c7.appendChild(f);c7.appendChild(v);}
     let kx=new XMLSerializer().serializeToString(kd);if(!/^<\?xml/.test(kx))kx='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'+kx;zip.file(pk,kx);}
+  await patchSoLieuHints(zip);
   if(form){ /* ghi số liệu gốc vào So_lieu; công thức giữ nguyên, chỉ lưu sẵn kết quả để app đối chiếu, Excel tính lại khi mở */
     const put=(doc,ref,v)=>{const el=Array.from(doc.getElementsByTagName('c')).find(x=>x.getAttribute('r')===ref);if(!el||v==null||v==='')return;
       Array.from(el.childNodes).forEach(n=>{if(n.nodeName!=='f')el.removeChild(n);});
@@ -5485,6 +5526,7 @@ pages['thong-ke']={render(root){
 
 /* ---- build log + errors */
 const BUILD_LOG=[
+['08/11/2026','B30','Claude','Sheet So_lieu của mọi biểu mẫu: thêm hộp gợi ý giá trị đo ở các ô nhập (tên chỉ tiêu, đơn vị, ví dụ số đo), không chặn nhập.','Đã kiểm thử'],
 ['08/11/2026','B29','Claude','Chỉnh chung sheet Phieu_KQ của mọi biểu mẫu: lề in 4,1/2,2/1,7/0,5 cm, tỷ lệ 100 %; bỏ tiêu đề PHIẾU KẾT QUẢ THỬ NGHIỆM, ngày thử nghiệm, mã mẫu, thiết bị thử nghiệm; quy cách mẫu cố định; nhãn chữ thường; số báo cáo ghi giá trị sau khi cấp, canh trái; dòng ký thay bằng Quảng Trị, ngày tháng năm (ngày theo số báo cáo), hàng cách 65.','Đã kiểm thử'],
 ['08/11/2026','B28','Claude','Bỏ nhập nhiệt độ, độ ẩm phòng thử ở mọi mẫu trừ xi măng (form điện thoại, kiểm tra file tải lên, file Excel tạo ra: xóa ô và đặt mục Kiem_tra không áp dụng); file báo cáo tải về đặt tên BC.dd.mm.yyyy.stt. Đơn vị thi công (viết tắt). Công trình (viết tắt).xlsx.','Đã kiểm thử'],
 ['08/11/2026','B27','Claude','Sửa lỗi theo file V0.27.5: tab Tổng hợp quan trắc gốc bỏ Trung bình, Nhỏ nhất, Lớn nhất; Hồ sơ lưu trữ bỏ nhật ký thao tác; thêm in Phiếu nhận mẫu (có khối ký người nhận mẫu và khách hàng) ở danh sách phiếu đang thực hiện và sau khi tiếp nhận.','Đã kiểm thử'],

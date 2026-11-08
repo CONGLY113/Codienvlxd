@@ -25,8 +25,8 @@ async def main():
           for(const code of P.mauCodes()){
             const s={ma_mau:'M1',so_yc:'YC1',khach:{ten:'KH'},du_an:{cong_trinh:'CT',thi_cong:'TC'},mau:{loai:code,ten:'x',ngay_nhan:'2026-11-05'},chi_tieu:[]};
             const mk=async extra=>{const u8=await P.buildTemplate(s,{id:'NS001',name:'A'},null,extra);const z=await JSZip.loadAsync(u8);const x=await z.file('xl/worksheets/sheet4.xml').async('string');return x;};
-            const x=await mk({bc:'BC26.11.08.3',hash:'h',url:'',at:'2026-11-08',qr:null}),y=await mk(null);
-            out[code]={m:/<pageMargins[^>]*>/.exec(x)[0],ps:/<pageSetup[^>]*>/.exec(x)[0],fit:/fitToPage/.test(x),
+            const x=await mk({bc:'BC26.11.08.3',hash:'h',url:'',at:'2026-11-08',qr:null}),y=await mk(null);const u9=await P.buildTemplate(s,{id:'NS001',name:'A'},null,null),z9=await JSZip.loadAsync(u9),sl=await z9.file('xl/worksheets/sheet2.xml').async('string');
+            out[code]={dv:/showInputMessage="1"[^>]*prompt="[^"]*Nhập/.test(sl),m:/<pageMargins[^>]*>/.exec(x)[0],ps:/<pageSetup[^>]*>/.exec(x)[0],fit:/fitToPage/.test(x),
               a5:/<c r="A5"[^>]*>[\\s\\S]*?<\\/c>/.exec(x)[0],date:/Quảng Trị, ngày 08 tháng 11 năm 2026/.test(x),dateDraft:/Quảng Trị, ngày\\s+tháng\\s+năm/.test(y),
               sp:/<row r="\\d+" ht="65" customHeight="1"/.test(x),tit:/PHIẾU KẾT QUẢ THỬ NGHIỆM/.test(x)&&!/<row r="4"[^>]*hidden="1"/.test(x),
               ctt:/Cán bộ thử nghiệm/.test(x),trpt:/Trưởng phòng TN/.test(x),qc:x.includes('Mẫu do đơn vị thi công và tư vấn giám sát lấy'),a5d:/<c r="A5"[^>]*>[\\s\\S]*?<\\/c>/.exec(y)[0]};
@@ -37,6 +37,7 @@ async def main():
             chk('scale="100"' in o['ps'] and not o['fit'] and 'fitToWidth' not in o['ps'],c+' scale '+o['ps'])
             chk('Số báo cáo: BC26.11.08.3' in o['a5'],c+' a5 '+o['a5'][:120])
             chk(o['date'],c+' dòng ngày');chk(o['dateDraft'],c+' dòng ngày bản nháp')
+            chk(o['dv'],c+' gợi ý giá trị đo So_lieu')
             chk(o['sp'],c+' hàng cách 65');chk(not o['tit'],c+' tiêu đề còn hiển thị')
             chk(not o['ctt'] and not o['trpt'],c+' còn tiêu đề người ký')
             if c not in ('NEN_BT','NEN_VUA','DO_CS'): chk(o['qc'],c+' quy cách')
