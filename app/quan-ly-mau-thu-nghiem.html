@@ -977,6 +977,8 @@ function cpVerify(raw,sample){
   if(rc.kdOut)out.push({label:'Hệ số dư vữa Kd nằm trong phạm vi bảng tra',state:'warn',note:'Bảng Kd chỉ có Vh đến '+CP_T.vh[CP_T.vh.length-1]+' lít và Mđl đến '+fnum(CP_T.mrows[CP_T.mrows.length-1],1).replace('.',',')+'. Vh = '+fnum(rc.Vh,1)+' lít, Mđl = '+fnum(raw.ct_mdl,2)+': Kd lấy ở cột hoặc hàng cuối của bảng, kết quả cấp phối chỉ gần đúng, nên thử lại bằng mẻ trộn.'});
   if(mxL>K.tol_r)out.push({label:W+'Từng viên không lệch trung bình quá 15 %',state:'warn',note:'Viên lệch '+fnum(mxL,1)+' % so với trung bình.'});
   return out;}
+/* ngày đúc mẫu của cấp phối bê tông = ngày báo cáo (phát hành) phiếu xi măng nguồn; không liên kết thì dùng ngày nhập tay */
+function cpNgayDuc(d){try{const x=((typeof S!=='undefined'&&S.samples)||[]).find(q=>q.ma_mau===(d&&d.xm_src)),at=x&&x.phieu&&x.phieu.at;if(!at)return null;const t=new Date(at);if(isNaN(t))return null;return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}catch(e){return null;}}
 /* ---- phiếu: phần thân gồm 3 bảng */
 const cpf=(v,dp)=>v==null?'':fnum(v,dp);
 function cpBody(r){
@@ -2179,21 +2181,99 @@ const plBlk=C=>(a,b,o,v)=>{const L=n=>String.fromCharCode(64+n),q1=/^([A-Z]+)(\d
     if(first&&v!=null&&typeof v==='object'&&v.f!=null)C.put(ref,{f:v.f,s:o});else C.put(ref,{v:first?v:'',s:o});}
   if(a!==b)C.addMerge(a+':'+b);};
 /* dựng lại khối thông tin (hàng 7..19) cho biểu mẫu rộng: nhãn ở A..C, giá trị gộp từ D đến cột cuối; mỗi mục một dòng */
-const plHead=C=>{const {put,rmRows,rowH,addMerge,cellsOf,txt,rows,sample}=C,L=n=>String.fromCharCode(64+n),colOf=c=>(c.getAttribute('r').match(/^[A-Z]+/)||[''])[0];
+const plHead=(C,o)=>{o=o||{};const {put,rmRows,rowH,addMerge,cellsOf,txt,rows,sample}=C,L=n=>String.fromCharCode(64+n),colOf=c=>(c.getAttribute('r').match(/^[A-Z]+/)||[''])[0];
   const lc=C.lastCol,items=[];
   for(let r=7;r<=19;r++){const row=rows[r];if(!row||row.getAttribute('hidden')==='1')continue;const cs=cellsOf(r),a=cs.find(c=>colOf(c)==='A'),la=a?txt(a).trim():'';if(!la)continue;
-    const vc=cs.find(c=>colOf(c)==='C');items.push({l:la,v:vc?txt(vc):''});
-    const e=cs.find(c=>colOf(c)==='E'),le=e?txt(e).trim():'';if(le&&le!=='Mã mẫu:'){const g=cs.find(c=>colOf(c)==='G');items.push({l:le,v:g?txt(g):''});}}
+    const vc=cs.find(c=>colOf(c)==='C');if(!(o.skip&&o.skip.test(la)))items.push({l:la,v:vc?txt(vc):''});
+    const e=cs.find(c=>colOf(c)==='E'),le=e?txt(e).trim():'';if(le&&le!=='Mã mẫu:'&&!o.skipPair){const g=cs.find(c=>colOf(c)==='G');items.push({l:le,v:g?txt(g):''});}}
   rmRows(7,19);for(let r=7;r<=19;r++)if(rows[r])rows[r].removeAttribute('hidden');
   const da=sample.du_an||{},gv=sample.giao&&sample.giao.ma_gv,len={'công trình':da.cong_trinh,'hạng mục':da.hang_muc,'chủ đầu tư':da.chu_dau_tu,'đơn vị giám sát':da.giam_sat,'đơn vị thi công':da.thi_cong,'địa chỉ':da.dia_chi,'căn cứ':gv?'Căn cứ phiếu yêu cầu và giao nhiệm vụ thử nghiệm '+gv:''};
-  const w=C.totalW||64,cpl=Math.max(30,Math.floor(w*0.95)),hh=n=>{const k=Math.max(1,Math.ceil((n||0)/cpl));return k<=1?15:Math.round(13.5*k+3);};
-  items.forEach((it,i)=>{const r=7+i;if(r>19)return;put('A'+r,{v:it.l,s:{al:'left',wrap:false}});
+  const w=C.totalW||64,cpl=Math.max(30,Math.floor(w*0.95)),h0=o.h||15,hh=n=>{const k=Math.max(1,Math.ceil((n||0)/cpl));return k<=1?h0:Math.round((h0-1.5)*k+3);},sz=o.sz||11;
+  const r0=o.start||7;items.forEach((it,i)=>{const r=r0+i;if(r>19)return;put('A'+r,{v:it.l,s:{al:'left',wrap:false,sz}});
     const v=/^=/.test(it.v)?{f:it.v.slice(1)}:it.v,dt=typeof v==='object'&&/^Ngày/.test(it.l);
-    plBlk(C)('D'+r,lc+r,dt?{al:'left',num:'dd/mm/yyyy'}:{al:'left'},v);
-    const key=Object.keys(len).find(k=>it.l.toLowerCase().startsWith(k));rowH(r,key?hh(String(len[key]||'').length):15);
+    plBlk(C)('D'+r,lc+r,dt?{al:'left',num:'dd/mm/yyyy',sz}:{al:'left',sz},v);
+    const key=Object.keys(len).find(k=>it.l.toLowerCase().startsWith(k));rowH(r,key?hh(String(len[key]||'').length):h0);
     if(key==='hạng mục'&&!String(len[key]||'').trim())rows[r].setAttribute('hidden','1');});
-  for(let r=7+items.length;r<=19;r++)rowH(r,3);
+  for(let r=r0+items.length;r<=19;r++)rowH(r,3);return r0+items.length;
 };
+/* thiết kế cấp phối vữa / bê tông: các khối vật liệu có khung, bảng thành phần, kết quả nén mẫu đúc thử (theo ảnh mẫu) */
+const cpLayout=(C,bt)=>{const {rmRows,addMerge,rows}=C,blk0=plBlk(C),blk=(a,b,o,v)=>blk0(a,b,Object.assign({sz:10},o),v),put=(ref,o)=>C.put(ref,Object.assign({},o,{s:Object.assign({sz:10},o.s||{})})),rowH=(r,h)=>C.rowH(r,Math.round(h*0.86));
+  C.lastCol='H';rmRows(21,46);
+  /* hàng 7: yêu cầu thử nghiệm; các hàng thông tin còn lại từ hàng 8 */
+  const n=plHead(C,{skip:/^(Tên mẫu|Quy cách|Phương pháp|Ngày nhận)/,skipPair:true,start:8,h:14,sz:10});C.rowH(6,6);
+  for(let r=21;r<=46;r++){if(rows[r]){rows[r].removeAttribute('hidden');rowH(r,3);}}
+  blk('A7','A7',{al:'left',wrap:false},'Yêu cầu thử nghiệm:');
+  blk('D7','F7',{b:1,i:1,al:'left'},bt?'Thiết kế cấp phối bê tông mác':'Thiết kế cấp phối vữa xi măng cát');
+  if(bt){put('D7',{f:'"Thiết kế cấp phối bê tông mác "&IF(ISNUMBER(So_lieu!B5),FIXED(So_lieu!B5,0,TRUE),"")',s:{b:1,i:1,al:'left'}});
+    blk('G7','H7',{b:1,i:1,al:'left'},{f:'IFERROR("độ sụt: "&INDEX(_HeThong!$B$50:$B$55,So_lieu!B6),"")'});}
+  else blk('G7','H7',{b:1,i:1,al:'left'},{f:'IF(ISNUMBER(in_mac),"Mác vữa: "&FIXED(in_mac,0,TRUE),"")'});
+  rowH(7,16);
+  let r=n;rowH(r,5);r++;
+  const T={b:1,al:'left',wrap:false};
+  const B={bd:'lrtb',al:'left'},BC={bd:'lrtb'},BB={bd:'lrtb',b:1,i:1,al:'left'},BT={bd:'lrtb',b:1,i:1};
+  const box=(r0,type,d1,d2,rowsL)=>{ /* khối 3 hàng: A:B tên vật liệu, C:D mô tả, E:G nhãn, H giá trị */
+    blk('A'+r0,'B'+(r0+rowsL.length-1),BT,type);
+    for(let k=0;k<rowsL.length;k++){const q=r0+k,x=rowsL[k];
+      blk('C'+q,'D'+q,k===0?BB:B,k===0?d1:(k===1?d2:''));
+      blk('E'+q,'G'+q,B,x[0]);blk('H'+q,'H'+q,BC,x[1]);rowH(q,16);}};
+  put('A'+r,{v:bt?'A. CÁC LOẠI VẬT LIỆU SỬ DỤNG':'A. CÁC LOẠI VẬT LIỆU SỬ DỤNG',s:T});rowH(r,18);r++;
+  const f2=x=>({f:x});
+  if(bt){
+    box(r,{f:'So_lieu!B33&CHAR(10)&"Dmax "&So_lieu!B34&" mm"'},f2('IF(So_lieu!B32="","",So_lieu!B32)'),f2('IF(ISNUMBER(So_lieu!B82),"Độ hỗng (%): "&FIXED(So_lieu!B82*100,1,TRUE),"")'),
+      [['Khối lượng thể tích xốp (g/cm³)',f2('IF(ISNUMBER(So_lieu!B36),FIXED(So_lieu!B36/1000,3,TRUE),"")')],['Khối lượng riêng (g/cm³)',f2('IF(ISNUMBER(So_lieu!B37),FIXED(So_lieu!B37,2,TRUE),"")')],['Độ nén dập trong xi lanh (%)',f2('IF(ISNUMBER(So_lieu!B39),FIXED(So_lieu!B39,1,TRUE),"")')]]);
+    rows[r].setAttribute('ht','18');r+=3;
+    box(r,'Cát',f2('"Nguồn "&So_lieu!B23'),f2('IF(ISNUMBER(So_lieu!B24),"Mô đun độ lớn: "&FIXED(So_lieu!B24,2,TRUE),"")'),
+      [['Khối lượng riêng (g/cm³)',f2('IF(ISNUMBER(So_lieu!B26),FIXED(So_lieu!B26,2,TRUE),"")')],['Khối lượng thể tích xốp (g/cm³)',f2('IF(ISNUMBER(So_lieu!B25),FIXED(So_lieu!B25/1000,3,TRUE),"")')],
+       ['Độ hỗng (%)',f2('IF(AND(ISNUMBER(So_lieu!B25),ISNUMBER(So_lieu!B26)),FIXED((1-So_lieu!B25/1000/So_lieu!B26)*100,1,TRUE),"")')]]);r+=3;
+    box(r,'Xi măng',f2('"Loại: "&So_lieu!B13'),f2('IF(So_lieu!B14="","","Số lô: "&So_lieu!B14)'),
+      [['Khối lượng riêng (g/cm³)',f2('IF(ISNUMBER(So_lieu!B16),FIXED(So_lieu!B16,2,TRUE),"")')],['Khối lượng thể tích xốp (g/cm³)',f2('IF(ISNUMBER(So_lieu!B17),FIXED(So_lieu!B17,2,TRUE),"")')],
+       ['Cường độ nén R28 (P.P nhanh, MPa)',f2('IF(ISNUMBER(So_lieu!B15),FIXED(So_lieu!B15,1,TRUE),"")')]]);r+=3;
+    blk('A'+r,'B'+r,BT,'Phụ gia');blk('C'+r,'D'+r,BB,{f:'"Loại: "&IF(So_lieu!B42="","Không sử dụng",So_lieu!B42)'});blk('E'+r,'G'+r,B,'Tỷ lệ phụ gia (lít/100 kg XM)');
+    blk('H'+r,'H'+r,BC,{f:'IF(N(So_lieu!B43)>0,FIXED(So_lieu!B43,2,TRUE),"0.0")'});rowH(r,18);r++;
+  }else{
+    box(r,'Cát',f2('"Nguồn "&in_ct_ten'),f2('IF(ISNUMBER(in_ct_mdl),"Mô đun độ lớn: "&FIXED(in_ct_mdl,2,TRUE),"")'),
+      [['Khối lượng riêng (g/cm³)',f2('IF(ISNUMBER(in_ct_ra),FIXED(in_ct_ra,2,TRUE),"")')],['Khối lượng thể tích xốp (g/cm³)',f2('IF(ISNUMBER(in_ct_rx),FIXED(in_ct_rx/1000,3,TRUE),"")')],
+       ['Độ hỗng (%)',f2('IF(out_hong="","",FIXED(out_hong,dp_h,TRUE))')]]);r+=3;
+    box(r,'Xi măng',f2('in_xm_ten'),f2('IF(in_xm_lo="","","Số lô: "&in_xm_lo)'),
+      [['Khối lượng riêng (g/cm³)',f2('IF(ISNUMBER(in_xm_rho),FIXED(in_xm_rho,2,TRUE),"")')],['Khối lượng thể tích xốp (g/cm³)',f2('IF(ISNUMBER(in_xm_rhox),FIXED(in_xm_rhox,2,TRUE),"")')],
+       ['Cường độ chịu nén - P.P nhanh (MPa)',f2('IF(ISNUMBER(in_xm_r28),FIXED(in_xm_r28,1,TRUE),"")')]]);r+=3;
+  }
+  rowH(r,6);r++;
+  /* B. thành phần */
+  put('A'+r,{v:bt?'B. KẾT QUẢ THÀNH PHẦN CẤP PHỐI BÊ TÔNG':'B. KẾT QUẢ THÀNH PHẦN CẤP PHỐI VỮA',s:T});rowH(r,18);r++;
+  const H={b:1,bd:'lrtb'};
+  blk('A'+r,'B'+r,H,'Vật liệu');blk('C'+r,'D'+r,H,bt?'Theo khối lượng (kg)':'Tính theo trọng lượng (kg)');blk('E'+r,'F'+r,H,'Tính theo TT tuyệt đối (lít)');blk('G'+r,'H'+r,H,'Tính theo TT xốp (lít)');rowH(r,20);r++;
+  const mat=bt?[['Xi măng','B79','B90','B95'],['Cát','B87','B91','B96'],['Đá dăm, sỏi','B88','B92','B97'],['Nước','B78','B93',null]]:[['Xi măng','out_X','out_vx','out_sx'],['Cát','out_cat','out_vc','out_sc'],['Nước','out_N','out_N','out_N']];
+  mat.forEach(m=>{const ref=c=>c==null?null:(bt?'So_lieu!'+c:c),fx=(c,dp)=>c==null?'':'IF('+ref(c)+'="","",FIXED('+ref(c)+','+dp+',TRUE))';
+    blk('A'+r,'B'+r,{bd:'lrtb',al:'left'},m[0]);
+    blk('C'+r,'D'+r,BC,bt?{f:'IF(ISNUMBER('+ref(m[1])+'),FIXED('+ref(m[1])+',0,TRUE),"")'}:{f:fx(m[1],'dp_m')});
+    blk('E'+r,'F'+r,BC,bt?{f:'IF(ISNUMBER('+ref(m[2])+'),FIXED('+ref(m[2])+',1,TRUE),"")'}:{f:fx(m[2],'dp_v')});
+    blk('G'+r,'H'+r,BC,m[3]==null?'':(bt?{f:'IF(ISNUMBER('+ref(m[3])+'),FIXED('+ref(m[3])+',1,TRUE),"")'}:{f:fx(m[3],'dp_v')}));rowH(r,18);r++;});
+  /* dòng tỷ lệ */
+  if(bt){blk('A'+r,'H'+r,{al:'left',i:1},{f:'IFERROR(IF(N(So_lieu!B43)>0,"Phụ gia "&So_lieu!B42&": "&ROUND(So_lieu!B89,2)&" lít. ","")&"Tỷ lệ X/N = "&ROUND(So_lieu!B75,3)&"; N/X = "&ROUND(1/So_lieu!B75,3)&"; thể tích hồ xi măng "&ROUND(So_lieu!B80,1)&" lít; hệ số dư vữa Kd = "&ROUND(So_lieu!B81,2)&"; tổng thể tích tuyệt đối "&ROUND(So_lieu!B94,1)&" lít.","")'});rowH(r,28);}
+  else{blk('A'+r,'H'+r,{al:'left',i:1},{f:'IF(out_rv="","","Tỷ lệ thể tích xốp cát : xi măng = "&FIXED(out_rv,dp_t,TRUE)&" : 1.")'});rowH(r,16);}
+  r++;rowH(r,6);r++;
+  /* C. nén mẫu đúc thử */
+  put('A'+r,{v:'C. KẾT QUẢ NÉN MẪU ĐÚC THỬ',s:T});
+  blk('E'+r,'H'+r,{al:'left',b:1},{f:'IF(Thong_tin!B23="","Ngày đúc:","Ngày đúc: "&TEXT(Thong_tin!B23,"dd/mm/yyyy"))'});rowH(r,18);r++;
+  const NC={al:'left',wrap:false},V={b:1};
+  const rr=bt?[['E59','Cường độ chịu nén sau 3 ngày'],['F59','Cường độ chịu nén sau 7 ngày'],['G59','Cường độ chịu nén dự kiến sau 28 ngày']]:null;
+  const left=bt?[['Kích thước mẫu (cm):','So_lieu!B48&" x "&So_lieu!B48&" x "&So_lieu!B48'],['Hệ số kích thước mẫu:','IF(ISNUMBER(So_lieu!B49),FIXED(So_lieu!B49,1,TRUE),"")'],['Độ sụt ban đầu:','IF(ISNUMBER(So_lieu!B52),FIXED(So_lieu!B52,1,TRUE)&" (cm)","")']]:[['Kích thước mẫu (mm):','"40x40x160"'],['',''],['','']];
+  for(let k=0;k<3;k++){
+    blk('A'+r,'C'+r,NC,left[k][0]);if(left[k][1])put('D'+r,{f:left[k][1],s:NC});
+    if(bt){const col=['E','F','G'][k];
+      blk('E'+r,'G'+r,NC,k<2?rr[k][1]:{f:'IF(ISNUMBER(So_lieu!G59),"Cường độ chịu nén sau 28 ngày","Cường độ chịu nén dự kiến sau 28 ngày")'});
+      blk('H'+r,'H'+r,Object.assign({},V,{al:'right'}),{f:k<2?'IF(ISNUMBER(So_lieu!'+col+'59),FIXED(So_lieu!'+col+'59*10,0,TRUE)&" daN/cm²","")':'IF(ISNUMBER(So_lieu!G59),FIXED(So_lieu!G59*10,0,TRUE)&" daN/cm²",IF(ISNUMBER(So_lieu!F63),FIXED(So_lieu!F63*10,0,TRUE)&" daN/cm²",""))'});}
+    else{const o=['out_R3','out_R7','out_R28'][k];blk('E'+r,'G'+r,NC,['Cường độ chịu nén sau 3 ngày','Cường độ chịu nén sau 7 ngày','Cường độ chịu nén dự kiến sau 28 ngày'][k]);
+      blk('H'+r,'H'+r,Object.assign({},V,{al:'right'}),{f:'IF('+o+'="","",FIXED('+o+',dp_r,TRUE)&" daN/cm²")'});}
+    rowH(r,17);r++;}
+  rowH(r,5);r++;
+  blk('A'+r,'H'+r,{al:'left',i:1},bt?'Ghi chú: Độ ẩm vật liệu khi tính bằng 0 % (khi thiết kế thực tế sẽ có hiệu chỉnh lượng cát, đá cho phù hợp).':'Ghi chú: Độ ẩm vật liệu khi tính bằng 0 %.');rowH(r,bt?28:16);r++;
+  blk('A'+r,'H'+r,{al:'left',i:1},'Cường độ chịu nén dự kiến sau 28 ngày chỉ có giá trị tham khảo.');rowH(r,16);r++;
+  if(bt){blk('A'+r,'H'+r,{al:'left',b:1},{f:'IF(ISNUMBER(So_lieu!G59),"Nhận xét: Cường độ nén sau 28 ngày đạt "&ROUND(So_lieu!G62,1)&" % so với mác thiết kế.","")'});rowH(r,16);r++;}
+  C.endRow=r;
+};
+PK_LAYOUT.CP_VUA=C=>cpLayout(C,false);PK_LAYOUT.CP_BT=C=>cpLayout(C,true);
 PK_LAYOUT.THEP_XD=C=>{const {put,rmRows,rowH}=C,L=n=>String.fromCharCode(64+n);
   rmRows(22,31);wideForm(C,[4,6,9,9,7,7,8,7,8,7,8,10]);C.totalW=64;plHead(C);
   const H={b:1,bd:'lrtb',sz:10},D={bd:'lrtb',sz:10};
@@ -2407,7 +2487,7 @@ async function buildTemplate(sample,tester,form,extra){
   str('B19',tester.id);str('B20',tester.name);if(extra&&extra.bc)str('B7',extra.bc);
   const noEnv=!envNeed(loaiOf(sample));
   if(noEnv)['A25','B25','C25','A26','B26','C26'].forEach(r=>{const c=cell(r);if(!c)return;clear(c);c.removeAttribute('t');c.removeAttribute('s');});
-  if(form){const f=form.d,a=serialFromISO(f.d0),b=serialFromISO(f.d1);if(a)num('B23',a);if(b)num('B24',b);
+  if(form){const f=form.d,a=serialFromISO(loaiOf(sample)==='CP_BT'&&cpNgayDuc(f)||f.d0),b=serialFromISO(f.d1);if(a)num('B23',a);if(b)num('B24',b);
     if(envNeed(loaiOf(sample))){if(typeof f.tc==='number')num('B25',f.tc);if(typeof f.ha==='number')num('B26',f.ha);}str('B27',f.tt);(f.dv||[]).slice(0,6).forEach((c,i)=>str('B'+(30+i),c));}
   let xmlOut=new XMLSerializer().serializeToString(doc);if(!/^<\?xml/.test(xmlOut))xmlOut='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'+xmlOut;
   zip.file(p,xmlOut);

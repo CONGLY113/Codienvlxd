@@ -40,6 +40,6 @@ async def main():
             chk(o['dv'],c+' gợi ý giá trị đo So_lieu')
             chk(o['sp'],c+' hàng cách 65');chk(not o['tit'],c+' tiêu đề còn hiển thị')
             chk(not o['ctt'] and not o['trpt'],c+' còn tiêu đề người ký')
-            if c not in ('NEN_BT','NEN_VUA','DO_CS'): chk(o['qc'],c+' quy cách')
+            if c not in ('NEN_BT','NEN_VUA','DO_CS','CP_BT','CP_VUA'): chk(o['qc'],c+' quy cách')
         print('ok',ok,'bad',bad,'errs',errs)
 asyncio.run(main())
