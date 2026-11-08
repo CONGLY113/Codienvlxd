@@ -29,8 +29,8 @@ async def main():
               const wb=await P.PKV.load(u8);const so=wb.sheets.So_lieu;const R=await P.PKV.render(wb,'Phieu_KQ');
               const cell=k=>{const c=so.cells[k];return c?(c.v!=null?c.v:null):null};
               const an=await P.analyzeUpload(s,u8);
-              return {d4:cell('D4'),d5:cell('D5'),c4:cell('C4'),c5:cell('C5'),txt:[...R.el.querySelectorAll('tr')].map(t=>[...t.children].map(c=>c.textContent.trim()).filter(Boolean).join(' | ')).join(String.fromCharCode(10)),raw:an.raw?{ky:an.raw.ky,duc:an.raw.duc,tuoi:an.raw.tuoi}:null,checks:an.checks.filter(c=>c.state==='fail').map(c=>c.label)}}""",[loai,mac,fs])
-            chk(r['d4']=='BT-M250-01' and r['d5']==46303 and r['c4']=='Ký hiệu mẫu' and r['c5']=='Ngày đúc mẫu',loai+' So_lieu D4/D5: %s %s'%(r['d4'],r['d5']))
+              return {d4:cell('B5'),d5:cell('E5'),c4:cell('B4'),c5:cell('E4'),txt:[...R.el.querySelectorAll('tr')].map(t=>[...t.children].map(c=>c.textContent.trim()).filter(Boolean).join(' | ')).join(String.fromCharCode(10)),raw:an.raw?{ky:an.raw.ky,duc:an.raw.duc,tuoi:an.raw.tuoi}:null,checks:an.checks.filter(c=>c.state==='fail').map(c=>c.label)}}""",[loai,mac,fs])
+            chk(r['d4']=='BT-M250-01' and r['d5']==46303 and r['c4']=='Ký hiệu mẫu' and r['c5']=='Ngày đúc',loai+' So_lieu bảng B5/E5: %s %s'%(r['d4'],r['d5']))
             chk('Ký hiệu mẫu: | BT-M250-01' in r['txt'],loai+' Phieu_KQ ký hiệu mẫu')
             chk('Ngày đúc mẫu: | 08/10/2026' in r['txt'],loai+' Phieu_KQ ngày đúc')
             chk('Tuổi mẫu: | (ngày) | 28' in r['txt'],loai+' tuổi mẫu')

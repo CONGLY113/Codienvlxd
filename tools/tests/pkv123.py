@@ -10,13 +10,13 @@ def colN(s):
     n=0
     for ch in s:n=n*26+ord(ch)-64
     return n
-def cells(path):
+def cells(path,sheet='Phieu_KQ'):
     z=zipfile.ZipFile(path)
     ss=[]
     if 'xl/sharedStrings.xml' in z.namelist():
         ss=[html.unescape(re.sub(r'<[^>]+>','',m)) for m in re.findall(r'<si>(.*?)</si>',z.read('xl/sharedStrings.xml').decode(),re.S)]
     wb=z.read('xl/workbook.xml').decode();rel=z.read('xl/_rels/workbook.xml.rels').decode()
-    rid=re.search(r'<sheet [^>]*name="Phieu_KQ"[^>]*r:id="([^"]+)"',wb).group(1)
+    rid=re.search(r'<sheet [^>]*name="%s"[^>]*r:id="([^"]+)"'%sheet,wb).group(1)
     tgt=re.search(r'<Relationship [^>]*Id="%s"[^>]*Target="([^"]+)"'%rid,rel) or re.search(r'<Relationship [^>]*Target="([^"]+)"[^>]*Id="%s"'%rid,rel)
     x=z.read('xl/'+tgt.group(1).lstrip('/').replace('xl/','')).decode()
     out={}
@@ -48,19 +48,21 @@ async def main():
           for(const code of P.mauCodes()){ if(only&&!only.includes(code))continue;
             const G=P.GT[code];const ph=G?G.ph:(code==='DA_5_20'?P.MF_PH_DA:P.MF_PH);const d={};Object.keys(ph||{}).forEach(k=>{const v=ph[k];d[k]=typeof v==='string'&&v!==''&&!isNaN(+v.replace(',','.'))?+v.replace(',','.'):v;});
             Object.assign(d,G&&G.defaults||{},{d0:'2026-11-06',d1:'2026-11-07',tc:27,ha:60,tt:'',dv:[]});
+            if(code==='NEN_BT'||code==='NEN_VUA'){d.duc=46300;d.more=[Object.assign({},d,{ky:'Mẫu hai',tuoi:7,duc:46320,f_0:(+d.f_0||10)+3})];d.more.forEach(x=>{delete x.more;});}
             const s={id:'S1',ma_mau:'M26.11.05.1',so_yc:'YC1',so_bao_cao:'BC26.11.08.3',giao:{ma_nv:'NS001',ma_gv:'GV1',ten:'Nguyễn Văn Sự'},khach:{ten:'KH'},du_an:{cong_trinh:'CT',thi_cong:'TC'},mau:{loai:code,ten:'Mẫu thử',ngay_nhan:'2026-11-05'},chi_tieu:[]};
-            try{const u8=await P.buildTemplate(s,{id:'NS001',name:'Nguyễn Văn Sự'},{d},{bc:'BC26.11.08.3',hash:'h',url:'u',at:'2026-11-08',qr:null});
+            try{const u8=await P.buildTemplate(s,{id:'NS001',name:'Nguyễn Văn Sự'},{d},{bc:'BC26.11.08.3',hash:'h',url:'u',at:'2026-11-08',qr:null,more:[{bc:'BC26.11.08.4',url:'u2',qr:null}]});
               let o='';for(let i=0;i<u8.length;i+=8192)o+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));out[code]={x:btoa(o)};}catch(e){out[code]={err:String(e)}}}
           return out}""",ONLY)
         ok=[c for c,o in res.items() if 'x' in o]
         for c in ok: open('%s/%s.xlsx'%(OUT,c),'wb').write(base64.b64decode(res[c]['x']))
         subprocess.run(['soffice','--headless','--convert-to','xlsx:Calc MS Excel 2007 XML','--outdir',OUT+'/lo']+['%s/%s.xlsx'%(OUT,c) for c in ok],capture_output=True,timeout=1500)
         tot=0;bad=0
-        for c in ok:
-            r=await page.evaluate("""async(b64)=>{const P=window.__ptn;const u8=Uint8Array.from(atob(b64),x=>x.charCodeAt(0));
-              try{const wb=await P.PKV.load(u8);const R=await P.PKV.render(wb,'Phieu_KQ');return{texts:R.texts,vis:R.vis,w:R.w,h:R.h,svg:R.el.querySelectorAll('svg').length,img:R.el.querySelectorAll('img').length}}catch(e){return{err:String(e&&e.stack||e)}}}""",res[c]['x'])
+        jobs=[(c,'Phieu_KQ') for c in ok]+[(c,'Phieu_KQ_2') for c in ok if c in('NEN_BT','NEN_VUA')]
+        for c,sh in jobs:
+            r=await page.evaluate("""async([b64,sh])=>{const P=window.__ptn;const u8=Uint8Array.from(atob(b64),x=>x.charCodeAt(0));
+              try{const wb=await P.PKV.load(u8);const R=await P.PKV.render(wb,sh);return{texts:R.texts,vis:R.vis,w:R.w,h:R.h,svg:R.el.querySelectorAll('svg').length,img:R.el.querySelectorAll('img').length}}catch(e){return{err:String(e&&e.stack||e)}}}""",[res[c]['x'],sh])
             if 'err' in r: print(c,'LỖI',r['err'][:300]);bad+=1;continue
-            lo=cells('%s/lo/%s.xlsx'%(OUT,c))
+            lo=cells('%s/lo/%s.xlsx'%(OUT,c),sh)
             ours={k:(t,raw) for k,t,raw in r['texts']}
             vc=set(r['vis']['cols']);vr=set(r['vis']['rows'])
             miss=[];n=0
@@ -80,6 +82,6 @@ async def main():
                         if b is None or abs(a-b)>1e-6*max(1,abs(a)): miss.append((ref,val,t,raw))
                     except Exception as e: miss.append((ref,val,t))
             tot+=n;bad+=len(miss)
-            print('%-14s ô %3d lệch %2d  ảnh %d svg %d  %dx%d'%(c,n,len(miss),r['img'],r['svg'],r['w'],r['h']), miss[:4] if miss else '')
+            print('%-14s %-10s ô %3d lệch %2d  ảnh %d svg %d  %dx%d'%(c,sh,n,len(miss),r['img'],r['svg'],r['w'],r['h']), miss[:4] if miss else '')
         print('TỔNG ô',tot,'lệch',bad);print(errs[:10]);print('lỗi dựng:',{c:o['err'] for c,o in res.items() if 'err' in o})
 asyncio.run(main())
