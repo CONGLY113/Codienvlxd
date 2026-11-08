@@ -2090,6 +2090,26 @@ async function fitRows(zip,sample){ /* 0.7.4: chiều cao hàng theo độ dài 
 /* ===== 0.27.6 Chỉnh chung sheet Phieu_KQ cho mọi biểu mẫu (lề in, bỏ dòng thừa, dòng ký, số báo cáo) ===== */
 const PK_QC='Mẫu do đơn vị thi công và tư vấn giám sát lấy';
 const PK_NO_QC={NEN_BT:1,NEN_VUA:1};
+/* bố cục bảng kết quả riêng theo loại mẫu, mỗi hàm nhận CTX (xem patchPhieuCommon) */
+const PK_LAYOUT={};
+PK_LAYOUT.DA_GOC=C=>{const {put,rmRows,rowH,addMerge,colNum}=C;
+  const L=n=>String.fromCharCode(64+n);
+  const blk=(a,b,o,v)=>{const q1=/^([A-Z]+)(\d+)$/.exec(a),q2=/^([A-Z]+)(\d+)$/.exec(b);
+    for(let r=+q1[2];r<=+q2[2];r++)for(let c=colNum(q1[1]);c<=colNum(q2[1]);c++){const ref=L(c)+r,first=ref===a;
+      if(first&&v!=null&&typeof v==='object'&&v.f!=null)put(ref,{f:v.f,s:o});else put(ref,{v:first?v:'',s:o});}
+    if(a!==b)addMerge(a+':'+b);};
+  rmRows(22,29);
+  put('A21',{v:'KẾT QUẢ THỬ NGHIỆM',s:{b:1,i:1,sz:12}});
+  const H={b:1,bd:'lrtb'},HI={i:1,bd:'lrtb'},D={bd:'lrtb'},DB={b:1,bd:'lrtb'};
+  blk('A22','A24',H,'Thứ tự');blk('B22','B24',H,'Tên mẫu');blk('C22','C24',H,'Ký hiệu mẫu');blk('D22','D23',H,'Kích thước mẫu');put('D24',{v:'(mm²)',s:HI});
+  blk('E22','H22',H,'Kết quả thử (Nén bão hòa)');put('E23',{v:'Lực nén',s:H});put('F23',{v:'Cường độ chịu nén',s:H});blk('G23','H23',H,'Trung bình');
+  put('E24',{v:'(kN)',s:HI});put('F24',{v:'(MPa)',s:HI});blk('G24','H24',HI,'(MPa)');
+  blk('A25','A29',D,'1');blk('B25','B29',DB,'Mẫu 1');
+  for(let i=0;i<5;i++){const r=25+i,q=5+i;put('C'+r,{v:'Viên '+(i+1),s:D});
+    put('D'+r,{f:'IF(So_lieu!F'+q+'="","",FIXED(So_lieu!F'+q+',dp_dt,TRUE))',s:D});put('E'+r,{f:'IF(So_lieu!G'+q+'="","",FIXED(So_lieu!G'+q+',dp_luc))',s:D});put('F'+r,{f:'IF(So_lieu!H'+q+'="","",FIXED(So_lieu!H'+q+',dp_cd))',s:D});rowH(r,22);}
+  blk('G25','H29',DB,{f:'IF(out_r="","",FIXED(out_r,dp_cd))'});
+  rowH(22,22);rowH(23,32);rowH(24,18);
+};
 /* chỉnh riêng theo loại mẫu: nofill = bỏ nền màu; hide = ẩn hàng theo nhãn cột A; drop = xóa ô nhãn và ô giá trị cùng hàng; rep = đổi chữ (tiêu chuẩn) ở Phieu_KQ và So_lieu */
 const PK_TYPE=(()=>{const xm={nofill:1,hide:['Phương pháp thử:'],rep:[['TCVN 4030:2003','TCVN 13605:2023']]},nh={hide:['Phương pháp thử:']},ln={nofill:1};
   return{XM_PCB30:xm,XM_PCB40:xm,DO_CS:{nofill:1,drop:['Khu vực đo:'],hide:['Ghi chú đo:']},
@@ -2123,6 +2143,42 @@ async function patchPhieuCommon(zip,sample,extra){
   const mkRow=n=>{if(rows[n])return rows[n];const e=doc.createElementNS(NS_X,'row');e.setAttribute('r',String(n));
     const ks=Object.keys(rows).map(Number).filter(k=>k>n).sort((x,y)=>x-y);if(ks.length)sd.insertBefore(e,rows[ks[0]]);else sd.appendChild(e);rows[n]=e;return e;};
   const maxHead=30;
+  /* --- công cụ vẽ lại bảng kết quả theo loại mẫu --- */
+  const fontC={},bdC={},flC={},nfC={};let nfId=0;
+  const mkFont=o=>{const k=JSON.stringify([o.b,o.i,o.sz,o.fc]);if(fontC[k]!=null)return fontC[k];const f=stDoc.createElementNS(fonts.namespaceURI,'font');
+    if(o.b)f.appendChild(stDoc.createElementNS(fonts.namespaceURI,'b'));if(o.i)f.appendChild(stDoc.createElementNS(fonts.namespaceURI,'i'));
+    const sz=stDoc.createElementNS(fonts.namespaceURI,'sz');sz.setAttribute('val',String(o.sz||11));f.appendChild(sz);
+    const co=stDoc.createElementNS(fonts.namespaceURI,'color');co.setAttribute('rgb',o.fc||'FF000000');f.appendChild(co);
+    const nm=stDoc.createElementNS(fonts.namespaceURI,'name');nm.setAttribute('val','Times New Roman');f.appendChild(nm);const fm=stDoc.createElementNS(fonts.namespaceURI,'family');fm.setAttribute('val','1');f.appendChild(fm);
+    fonts.appendChild(f);fonts.setAttribute('count',String(fonts.children.length));return(fontC[k]=fonts.children.length-1);};
+  const bordersEl=stDoc.getElementsByTagName('borders')[0],fillsEl=stDoc.getElementsByTagName('fills')[0];
+  const mkBorder=spec=>{if(!spec)return 0;if(bdC[spec]!=null)return bdC[spec];const b=stDoc.createElementNS(bordersEl.namespaceURI,'border');
+    [['left','l'],['right','r'],['top','t'],['bottom','b']].forEach(([n,ch])=>{const e=stDoc.createElementNS(bordersEl.namespaceURI,n),m=new RegExp(ch+'(d?)').exec(spec);
+      if(m){e.setAttribute('style',m[1]?'dotted':'thin');const c=stDoc.createElementNS(bordersEl.namespaceURI,'color');c.setAttribute('rgb','FF000000');e.appendChild(c);}b.appendChild(e);});
+    b.appendChild(stDoc.createElementNS(bordersEl.namespaceURI,'diagonal'));bordersEl.appendChild(b);bordersEl.setAttribute('count',String(bordersEl.children.length));return(bdC[spec]=bordersEl.children.length-1);};
+  const mkFill=rgb=>{if(!rgb)return 0;if(flC[rgb]!=null)return flC[rgb];const f=stDoc.createElementNS(fillsEl.namespaceURI,'fill'),pf=stDoc.createElementNS(fillsEl.namespaceURI,'patternFill');pf.setAttribute('patternType','solid');
+    const fg=stDoc.createElementNS(fillsEl.namespaceURI,'fgColor');fg.setAttribute('rgb',rgb);pf.appendChild(fg);f.appendChild(pf);fillsEl.appendChild(f);fillsEl.setAttribute('count',String(fillsEl.children.length));return(flC[rgb]=fillsEl.children.length-1);};
+  const mkNum=code=>{if(!code)return 0;if(nfC[code]!=null)return nfC[code];let ne=stDoc.getElementsByTagName('numFmts')[0];
+    if(!ne){ne=stDoc.createElementNS(fonts.namespaceURI,'numFmts');stDoc.documentElement.insertBefore(ne,stDoc.documentElement.firstChild);}
+    if(!nfId)nfId=Math.max(163,...Array.from(ne.children).map(x=>+x.getAttribute('numFmtId')||0));nfId++;const e=stDoc.createElementNS(fonts.namespaceURI,'numFmt');e.setAttribute('numFmtId',String(nfId));e.setAttribute('formatCode',code);ne.appendChild(e);ne.setAttribute('count',String(ne.children.length));return(nfC[code]=nfId);};
+  const xfK={};
+  const xf=o=>{o=o||{};const k=JSON.stringify(o);if(xfK[k]!=null)return xfK[k];const x=stDoc.createElementNS(xfs.namespaceURI,'xf');
+    x.setAttribute('numFmtId',String(mkNum(o.num)));x.setAttribute('fontId',String(mkFont(o)));x.setAttribute('fillId',String(mkFill(o.fill)));x.setAttribute('borderId',String(mkBorder(o.bd)));x.setAttribute('xfId','0');
+    ['applyNumberFormat','applyFont','applyFill','applyBorder','applyAlignment'].forEach(a=>x.setAttribute(a,'1'));
+    const al=stDoc.createElementNS(xfs.namespaceURI,'alignment');al.setAttribute('horizontal',o.al||'center');al.setAttribute('vertical',o.va||'center');if(o.wrap!==false)al.setAttribute('wrapText','1');x.appendChild(al);
+    xfs.appendChild(x);xfs.setAttribute('count',String(xfs.children.length));return(xfK[k]=xfs.children.length-1);};
+  const colNum=L=>L.split('').reduce((n,ch)=>n*26+ch.charCodeAt(0)-64,0);
+  const cellEl=ref=>{const rn=+(ref.match(/\d+/)||[0])[0],row=mkRow(rn);let e=Array.from(row.children).find(c=>c.getAttribute('r')===ref);if(e)return e;
+    e=doc.createElementNS(NS_X,'c');e.setAttribute('r',ref);const cn=colNum(ref.replace(/\d+/,'')),nx=Array.from(row.children).find(c=>colNum(c.getAttribute('r').replace(/\d+/,''))>cn);if(nx)row.insertBefore(e,nx);else row.appendChild(e);return e;};
+  const put=(ref,o)=>{const c=cellEl(ref);while(c.firstChild)c.removeChild(c.firstChild);c.removeAttribute('t');if(o.s)c.setAttribute('s',String(xf(o.s)));
+    if(o.f!=null){const f=doc.createElementNS(NS_X,'f');f.textContent=o.f;c.appendChild(f);if(!o.num)c.setAttribute('t','str');c.appendChild(doc.createElementNS(NS_X,'v'));}
+    else if(typeof o.v==='number'){const v=doc.createElementNS(NS_X,'v');v.textContent=String(o.v);c.appendChild(v);}
+    else if(o.v!=null&&o.v!==''){setT(c,String(o.v));if(o.s)c.setAttribute('s',String(xf(o.s)));}return c;};
+  const rmRows=(r1,r2)=>{for(let r=r1;r<=r2;r++){const row=rows[r];if(!row)continue;while(row.firstChild)row.removeChild(row.firstChild);row.removeAttribute('ht');row.removeAttribute('customHeight');}
+    if(mc)Array.from(mc.getElementsByTagName('mergeCell')).forEach(m=>{const q=/^[A-Z]+(\d+):[A-Z]+(\d+)$/.exec(m.getAttribute('ref')||'');if(q&&+q[1]>=r1&&+q[2]<=r2)mc.removeChild(m);});mcSync();};
+  const rowH=(r,h)=>{const e=mkRow(r);e.setAttribute('ht',String(h));e.setAttribute('customHeight','1');};
+  const grid=(r1,r2,c1,c2,o)=>{for(let r=r1;r<=r2;r++)for(let c=colNum(c1);c<=colNum(c2);c++){const L=String.fromCharCode(64+c);if(!cellsOf(r).some(x=>x.getAttribute('r')===L+r)||true){const e=cellEl(L+r);if(!e.getAttribute('s'))e.setAttribute('s',String(xf(o)));}}};
+  const CTX={doc,sd,rows,mkRow,cellsOf,txt,put,rmRows,rowH,addMerge,xf,grid,colNum,sample,extra};
   /* 1. dòng đầu trang: bỏ tiêu đề, ngày thử, thiết bị, mã mẫu; quy cách; chữ thường */
   for(let r=1;r<=maxHead;r++){const cs=cellsOf(r);if(!cs.length)continue;const a=cs.find(c=>colOf(c)==='A'),ta=txt(a).trim();
     if(r<=6&&ta==='PHIẾU KẾT QUẢ THỬ NGHIỆM')rows[r].setAttribute('hidden','1');
@@ -2156,6 +2212,7 @@ async function patchPhieuCommon(zip,sample,extra){
     if(TP.nofill)Array.from(doc.getElementsByTagName('c')).forEach(c=>{const s0=+c.getAttribute('s')||0,b=xfs.children[s0];if(!b)return;const fid=+b.getAttribute('fillId')||0;if(!fid)return;
       const n=newXf(s0,'nf',x=>{x.setAttribute('fillId','0');x.setAttribute('applyFill','1');});c.setAttribute('s',String(n));});
   }
+  if(PK_LAYOUT[loaiOf(sample)])PK_LAYOUT[loaiOf(sample)](CTX);
   /* 4. trang in: lề 4,1 / 2,2 / 1,7 / 0,5 cm, tỷ lệ 100 % */
   let pm=doc.getElementsByTagName('pageMargins')[0];
   if(pm){pm.setAttribute('left','0.6693');pm.setAttribute('right','0.1969');pm.setAttribute('top','1.6142');pm.setAttribute('bottom','0.8661');pm.setAttribute('header','0.3');pm.setAttribute('footer','0.3');}
@@ -5542,6 +5599,7 @@ pages['thong-ke']={render(root){
 
 /* ---- build log + errors */
 const BUILD_LOG=[
+['08/11/2026','B32','Claude','Bộ công cụ vẽ lại bảng kết quả trong sheet Phieu_KQ (ô, ô gộp, viền, kiểu chữ) dùng cho các bố cục riêng theo loại mẫu.','Đã kiểm thử'],
 ['08/11/2026','B31','Claude','Phiếu kết quả theo loại mẫu (nhóm đơn giản): xi măng (bỏ nền, bỏ dòng phương pháp thử, TCVN 4030:2003 → TCVN 13605:2023), đo chống sét (bỏ khu vực đo, ghi chú đo, nền), đo K dao vòng/phễu rót cát (bỏ đoạn vị trí đo, nền; 22 TCN 02:71 → TCVN 12791:2020), đá láng nhựa (bỏ nền), nhựa đường, nhựa đường lỏng, gạch bê tông đặc/rỗng (bỏ dòng phương pháp thử).','Đã kiểm thử'],
 ['08/11/2026','B30','Claude','Sheet So_lieu của mọi biểu mẫu: thêm hộp gợi ý giá trị đo ở các ô nhập (tên chỉ tiêu, đơn vị, ví dụ số đo), không chặn nhập.','Đã kiểm thử'],
 ['08/11/2026','B29','Claude','Chỉnh chung sheet Phieu_KQ của mọi biểu mẫu: lề in 4,1/2,2/1,7/0,5 cm, tỷ lệ 100 %; bỏ tiêu đề PHIẾU KẾT QUẢ THỬ NGHIỆM, ngày thử nghiệm, mã mẫu, thiết bị thử nghiệm; quy cách mẫu cố định; nhãn chữ thường; số báo cáo ghi giá trị sau khi cấp, canh trái; dòng ký thay bằng Quảng Trị, ngày tháng năm (ngày theo số báo cáo), hàng cách 65.','Đã kiểm thử'],
@@ -6410,7 +6468,7 @@ async function boot(){
   Data.watch('config',list=>{const tb=list.find(x=>x.id==='tb_cat');S.tbcat=tb&&tb.map?tb.map:null;S.tbcat_meta=tb||null;S.mau=list.find(x=>x.id==='mau_kq')||null;S.mauf={};list.forEach(x=>{if(/^mauf_/.test(x.id))S.mauf[x.id.slice(5)]=x;});S.perCfg=list.find(x=>x.id==='periods')||null;S.saoLuu=list.find(x=>x.id==='sao_luu')||null;S.cfgLoaded=true;{const bg=list.find(x=>x.id==='bang_gia')||{};S.bgia=bg.gia||{};S.bgiaCt=bg.ct||{};S.bgiaThem=Array.isArray(bg.them)?bg.them:[];}{const bk=list.find(x=>x.id==='bank');S.bankCfg=bk?{stk:bk.stk,bin:bk.bin,bank:bk.bank,ten:bk.ten||''}:null;}syncSampleWatchers();ensurePeriodOpen();const cfg=list.find(x=>x.id==='main');if(cfg)S.config=Object.assign({policy:'canh_bao',han_tra_ngay:5,solo:true,ng_sc:null,ng_rx:null,ng_hh:null},cfg);schedule();});
   render();
 }
-window.__ptn={envNeed,bcFileName,buildTemplate,readXlsx,nmPrintBox,nmPackFromSample,dvPrintBox,dvTotals,dvPay,dvSave,dvAct,dvNumber,dvBook,dvLineFrom,dvAllBk,dvAllBg,dvImportLines,dvReadXlsx,dvTemplateXlsx,dvPriceXlsx,dvMine,dvDebtData,DV,DVS,dvShow,dvOpen,tbNotify,tbSync,tbAlert,tbEnable,tbRead,tbReadAll,tbUnread,tbOS,TB,sdCreate,sdApprove,sdMove,sdOldBytes,sdNewDlg,sdOpen,sdDateErr,sdList,sdPrintBox,sdNo,phieuNo,recompute,bkupRun,bkupCollect,xlBook,mauApply,mauDiff,validateTemplate,origB64,activeB64,mauOv,mauCodes,mauBytes,S,bkPrint,vietQrText,emvCrc,bkPay,bkAct,bkStLabel,bkNormDoc,bkQrText,bkQrNd,bkBank,bkPendingPays,bkSumRows,bkTblXlsx,bkQr,bkPayDlg,BK_UNIT,bkQty,bkPriceFor,bkPriceCatalog,bkParsePrices,bkPricesXlsx,bkLines,bkTotals,docSo,bkXlsx,bkDraftFrom,bkSave,ycGroups,BK,BKS,bkAll,bkDelta,bkPendingGroups,bkTam,toVwx,VWX,applyMau,cvRc,CV_T,MAT_OPT,macOf,cpFill,cpCands,cpVals,cvLinkChecks,nenRc,kRc,rcCT,kpCp,kVerify,rpt,monthlyYc,YC_MONTH,ycKey,NGUON_LBL,arcBuild,arcRead,arcCommit,arLookup,arcPeriods,arcDueCount,perDue,perEnd,AR,arOpenZip,setArTab:v=>{arTab=v;},rcCS,skNew,skDraw,skOp,skPng,skFromFile,skEmbed,skMedia,skOpen,skNorm,nguonLbl,rcCP,cpVals,cpCands,cpFill,cpBody,CP_T,CP_K,loaiOf,QT_TYPES,rcTX,rc1040,rcGach,rcDG,rcLN,renderPhieu,rawTable,recheck,qrText,GT,gt,rcXM,rcTH,issuedBytes,issuedParts,analyzeUploadGT,MF_PH,MF_PH_DA,submitUpload,loaiForm,defTests,TESTS,UP,buildTemplate,readXlsx,analyzeUpload,S,Data,ACCOUNTS,makeCode,PARTS,DET,sp,dp,bp,isNew,newSid,perOf,withDetail,loadDetailsFor,audit,recentActs,rebuildSamples,openPeriods,syncSampleWatchers,issueDoc,downloadPhieu,phieuBytes,setSession:id=>{SESSION=ACCOUNTS.find(a=>a.id===id)||null;saveSession();setWroom(null);},setWroom,wroom,dvEquip,dvTbImport,dvCcImport,get SESSION(){return SESSION;},get db(){return !!DB;}};
+window.__ptn={GT,envNeed,bcFileName,buildTemplate,readXlsx,nmPrintBox,nmPackFromSample,dvPrintBox,dvTotals,dvPay,dvSave,dvAct,dvNumber,dvBook,dvLineFrom,dvAllBk,dvAllBg,dvImportLines,dvReadXlsx,dvTemplateXlsx,dvPriceXlsx,dvMine,dvDebtData,DV,DVS,dvShow,dvOpen,tbNotify,tbSync,tbAlert,tbEnable,tbRead,tbReadAll,tbUnread,tbOS,TB,sdCreate,sdApprove,sdMove,sdOldBytes,sdNewDlg,sdOpen,sdDateErr,sdList,sdPrintBox,sdNo,phieuNo,recompute,bkupRun,bkupCollect,xlBook,mauApply,mauDiff,validateTemplate,origB64,activeB64,mauOv,mauCodes,mauBytes,S,bkPrint,vietQrText,emvCrc,bkPay,bkAct,bkStLabel,bkNormDoc,bkQrText,bkQrNd,bkBank,bkPendingPays,bkSumRows,bkTblXlsx,bkQr,bkPayDlg,BK_UNIT,bkQty,bkPriceFor,bkPriceCatalog,bkParsePrices,bkPricesXlsx,bkLines,bkTotals,docSo,bkXlsx,bkDraftFrom,bkSave,ycGroups,BK,BKS,bkAll,bkDelta,bkPendingGroups,bkTam,toVwx,VWX,applyMau,cvRc,CV_T,MAT_OPT,macOf,cpFill,cpCands,cpVals,cvLinkChecks,nenRc,kRc,rcCT,kpCp,kVerify,rpt,monthlyYc,YC_MONTH,ycKey,NGUON_LBL,arcBuild,arcRead,arcCommit,arLookup,arcPeriods,arcDueCount,perDue,perEnd,AR,arOpenZip,setArTab:v=>{arTab=v;},rcCS,skNew,skDraw,skOp,skPng,skFromFile,skEmbed,skMedia,skOpen,skNorm,nguonLbl,rcCP,cpVals,cpCands,cpFill,cpBody,CP_T,CP_K,loaiOf,QT_TYPES,rcTX,rc1040,rcGach,rcDG,rcLN,renderPhieu,rawTable,recheck,qrText,GT,gt,rcXM,rcTH,issuedBytes,issuedParts,analyzeUploadGT,MF_PH,MF_PH_DA,submitUpload,loaiForm,defTests,TESTS,UP,buildTemplate,readXlsx,analyzeUpload,S,Data,ACCOUNTS,makeCode,PARTS,DET,sp,dp,bp,isNew,newSid,perOf,withDetail,loadDetailsFor,audit,recentActs,rebuildSamples,openPeriods,syncSampleWatchers,issueDoc,downloadPhieu,phieuBytes,setSession:id=>{SESSION=ACCOUNTS.find(a=>a.id===id)||null;saveSession();setWroom(null);},setWroom,wroom,dvEquip,dvTbImport,dvCcImport,get SESSION(){return SESSION;},get db(){return !!DB;}};
 boot();
 })();
 </script>
