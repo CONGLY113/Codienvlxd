@@ -2077,14 +2077,87 @@ async function fitRows(zip,sample){ /* 0.7.4: chiều cao hàng theo độ dài 
     for(const [lab,val] of want){
       const ref=Object.keys(c).find(k=>/^A\d+$/.test(k)&&c[k].v&&String(c[k].v).trim().toLowerCase().startsWith(lab));if(!ref)continue;
       const n=ref.slice(1),re=new RegExp('<row r="'+n+'"([^>]*?)(/?)>'),m=re.exec(x);if(!m)continue;
-      let at=m[1];const h0=+((/\bht="([\d.]+)"/.exec(at)||[])[1]||17);
-      const len=String(val||'').length,lines=Math.max(1,Math.ceil(len/68)),ht=lines<=1?h0:Math.max(h0,Math.round(14.5*lines+3));
+      let at=m[1];const h0=15; /* 0.27.6: một dòng = 15 pt, cột hẹp lại nên ~60 ký tự/dòng */
+      const len=String(val||'').length,lines=Math.max(1,Math.ceil(len/60)),ht=lines<=1?h0:Math.max(h0,Math.round(13.5*lines+3));
       at=at.replace(/\s(ht|customHeight|hidden)="[^"]*"/g,'');
       const hid=(lab==='hạng mục'&&!String(val||'').trim())?' hidden="1"':'';
       x=x.replace(m[0],'<row r="'+n+'"'+at+' ht="'+ht+'" customHeight="1"'+hid+m[2]+'>');
     }
     zip.file(p4,x);
   }catch(e){console.warn('fitRows',e);}
+}
+
+/* ===== 0.27.6 Chỉnh chung sheet Phieu_KQ cho mọi biểu mẫu (lề in, bỏ dòng thừa, dòng ký, số báo cáo) ===== */
+const PK_QC='Mẫu do đơn vị thi công và tư vấn giám sát lấy';
+const PK_NO_QC={NEN_BT:1,NEN_VUA:1};
+async function patchPhieuCommon(zip,sample,extra){
+  const p='xl/worksheets/sheet4.xml',sf=zip.file(p);if(!sf)return;
+  const P=new DOMParser(),doc=P.parseFromString(await sf.async('string'),'application/xml'),sd=doc.getElementsByTagName('sheetData')[0];if(!sd)return;
+  const stF=zip.file('xl/styles.xml');if(!stF)return;
+  const stDoc=P.parseFromString(await stF.async('string'),'application/xml'),fonts=stDoc.getElementsByTagName('fonts')[0],xfs=stDoc.getElementsByTagName('cellXfs')[0];if(!fonts||!xfs)return;
+  let sst=[];const ssf=zip.file('xl/sharedStrings.xml');
+  if(ssf){const sx=P.parseFromString(await ssf.async('string'),'application/xml');sst=Array.from(sx.getElementsByTagName('si')).map(si=>Array.from(si.getElementsByTagName('t')).map(t=>t.textContent).join(''));}
+  const xfC={},newXf=(idx,key,mut)=>{const k=idx+'|'+key;if(xfC[k]!=null)return xfC[k];const base=xfs.children[idx];if(!base)return idx;
+    const x=base.cloneNode(true);mut(x);xfs.appendChild(x);xfs.setAttribute('count',String(xfs.children.length));return(xfC[k]=xfs.children.length-1);};
+  const unbold=idx=>{const base=xfs.children[idx];if(!base)return idx;const fo=fonts.children[+base.getAttribute('fontId')||0];if(!fo||!fo.getElementsByTagName('b').length)return idx;
+    return newXf(idx,'nb',x=>{const nf=fo.cloneNode(true);Array.from(nf.getElementsByTagName('b')).forEach(b=>nf.removeChild(b));fonts.appendChild(nf);fonts.setAttribute('count',String(fonts.children.length));x.setAttribute('fontId',String(fonts.children.length-1));x.setAttribute('applyFont','1');});};
+  const align=(idx,hz)=>newXf(idx,'al'+hz,x=>{let a=x.getElementsByTagName('alignment')[0];if(!a){a=stDoc.createElementNS(x.namespaceURI,'alignment');x.insertBefore(a,x.firstChild);}a.setAttribute('horizontal',hz);x.setAttribute('applyAlignment','1');});
+  const rows={};Array.from(sd.getElementsByTagName('row')).forEach(r=>{rows[+r.getAttribute('r')]=r;});
+  const cellsOf=r=>rows[r]?Array.from(rows[r].getElementsByTagName('c')):[];
+  const txt=c=>{if(!c)return'';const t=c.getAttribute('t');if(t==='inlineStr')return Array.from(c.getElementsByTagName('t')).map(x=>x.textContent).join('');
+    const v=c.getElementsByTagName('v')[0];if(t==='s'&&v)return sst[+v.textContent]||'';const fe=c.getElementsByTagName('f')[0];return fe?'='+fe.textContent:(v?v.textContent:'');};
+  const colOf=c=>(c.getAttribute('r').match(/^[A-Z]+/)||[''])[0];
+  const setT=(c,t,st)=>{while(c.firstChild)c.removeChild(c.firstChild);c.setAttribute('t','inlineStr');if(st!=null)c.setAttribute('s',String(st));
+    const is=doc.createElementNS(NS_X,'is'),te=doc.createElementNS(NS_X,'t');te.setAttributeNS('http://www.w3.org/XML/1998/namespace','xml:space','preserve');te.textContent=t;is.appendChild(te);c.appendChild(is);};
+  const blank=c=>{while(c.firstChild)c.removeChild(c.firstChild);c.removeAttribute('t');};
+  const mc=doc.getElementsByTagName('mergeCells')[0];
+  const mcSync=()=>{if(mc)mc.setAttribute('count',String(mc.getElementsByTagName('mergeCell').length));};
+  const delMerge=ref=>{if(!mc)return;Array.from(mc.getElementsByTagName('mergeCell')).forEach(m=>{const r=m.getAttribute('ref');if(r===ref)mc.removeChild(m);});mcSync();};
+  const delMergeRow=n=>{if(!mc)return;Array.from(mc.getElementsByTagName('mergeCell')).forEach(m=>{const r=m.getAttribute('ref');if(new RegExp('^[A-Z]+'+n+':[A-Z]+'+n+'$').test(r))mc.removeChild(m);});mcSync();};
+  const addMerge=ref=>{if(!mc)return;const m=doc.createElementNS(NS_X,'mergeCell');m.setAttribute('ref',ref);mc.appendChild(m);mcSync();};
+  const mkRow=n=>{if(rows[n])return rows[n];const e=doc.createElementNS(NS_X,'row');e.setAttribute('r',String(n));
+    const ks=Object.keys(rows).map(Number).filter(k=>k>n).sort((x,y)=>x-y);if(ks.length)sd.insertBefore(e,rows[ks[0]]);else sd.appendChild(e);rows[n]=e;return e;};
+  const maxHead=30;
+  /* 1. dòng đầu trang: bỏ tiêu đề, ngày thử, thiết bị, mã mẫu; quy cách; chữ thường */
+  for(let r=1;r<=maxHead;r++){const cs=cellsOf(r);if(!cs.length)continue;const a=cs.find(c=>colOf(c)==='A'),ta=txt(a).trim();
+    if(r<=6&&ta==='PHIẾU KẾT QUẢ THỬ NGHIỆM')rows[r].setAttribute('hidden','1');
+    if(/^Ngày (thử nghiệm|đo|nén mẫu|thử)\s*:/.test(ta)||/^Thiết bị thử nghiệm\s*:/.test(ta))rows[r].setAttribute('hidden','1');
+    cs.forEach(c=>{const t=txt(c).trim();
+      if(t==='Mã mẫu:'){blank(c);cs.forEach(d=>{if(txt(d).indexOf('in_ma_mau')>=0)blank(d);});}});
+    if(r>=7&&r<=19)cs.forEach(c=>{const s0=+c.getAttribute('s')||0;const n=unbold(s0);if(n!==s0)c.setAttribute('s',String(n));});
+    if(ta==='Quy cách mẫu:'&&!PK_NO_QC[loaiOf(sample)]){const cc=cs.find(c=>colOf(c)==='C');if(cc)setT(cc,PK_QC,cc.getAttribute('s'));}}
+  for(let r=1;r<=3;r++){if(cellsOf(r).some(c=>txt(c).trim()!==''))continue;mkRow(r).setAttribute('ht','3');rows[r].setAttribute('customHeight','1');}
+  /* 2. số báo cáo: giá trị sau khi cấp, canh lề trái */
+  const so=(extra&&extra.bc)||'';
+  {const a5=cellsOf(5).find(c=>colOf(c)==='A');if(a5){const s0=+a5.getAttribute('s')||0;
+    if(so)setT(a5,'Số báo cáo: '+so,align(s0,'left'));else a5.setAttribute('s',String(align(s0,'left')));}}
+  /* 3. dòng ký: bỏ hàng tiêu đề người ký, thay bằng "Quảng Trị, ngày tháng năm" (ngày của số báo cáo); hàng cách 65 */
+  let R2=0;for(let r=30;r<=140&&!R2;r++){const a=cellsOf(r).find(c=>colOf(c)==='A');if(a&&txt(a).trim()==='Cán bộ thử nghiệm')R2=r;}
+  if(R2){const row=rows[R2],cs=cellsOf(R2),a=cs.find(c=>colOf(c)==='A'),s0=+a.getAttribute('s')||0;
+    delMergeRow(R2);cs.forEach(c=>{if(c!==a)row.removeChild(c);});
+    const m=/(\d{2})\.(\d{2})\.(\d{2})\.\d+/.exec(so);
+    const dt=m?('ngày '+m[3]+' tháng '+m[2]+' năm 20'+m[1]):'ngày       tháng       năm';
+    setT(a,'Quảng Trị, '+dt,align(unbold(s0),'right'));addMerge('A'+R2+':H'+R2);row.setAttribute('ht','18');row.setAttribute('customHeight','1');
+    const sp=mkRow(R2+1);sp.setAttribute('ht','65');sp.setAttribute('customHeight','1');}
+  if(R2){const vm=new Set();if(mc)Array.from(mc.getElementsByTagName('mergeCell')).forEach(m=>{const q=/^[A-Z]+(\d+):[A-Z]+(\d+)$/.exec(m.getAttribute('ref')||'');if(q&&+q[1]!==+q[2])for(let r=+q[1];r<=+q[2];r++)vm.add(r);});
+    for(let r=R2-1;r>=R2-12&&r>=20;r--){const row=rows[r];if(vm.has(r))break;if(row&&cellsOf(r).some(c=>txt(c).trim()!==''))break;
+      mkRow(r).setAttribute('ht',r===R2-1?'6':'4');rows[r].setAttribute('customHeight','1');}}
+  /* 4. trang in: lề 4,1 / 2,2 / 1,7 / 0,5 cm, tỷ lệ 100 % */
+  let pm=doc.getElementsByTagName('pageMargins')[0];
+  if(pm){pm.setAttribute('left','0.6693');pm.setAttribute('right','0.1969');pm.setAttribute('top','1.6142');pm.setAttribute('bottom','0.8661');pm.setAttribute('header','0.3');pm.setAttribute('footer','0.3');}
+  const ps=doc.getElementsByTagName('pageSetup')[0];
+  if(ps){ps.removeAttribute('fitToHeight');ps.removeAttribute('fitToWidth');ps.setAttribute('scale','100');ps.setAttribute('orientation','portrait');ps.setAttribute('paperSize','9');}
+  const fp=doc.getElementsByTagName('pageSetUpPr')[0];if(fp)fp.removeAttribute('fitToPage');
+  if(pm&&!doc.getElementsByTagName('printOptions')[0]){const po=doc.createElementNS(NS_X,'printOptions');po.setAttribute('horizontalCentered','1');pm.parentNode.insertBefore(po,pm);}
+  /* cột A..cột cuối vùng in vừa khổ A4 ở 100 %: tổng độ rộng tối đa 90 ký tự (~17,5 cm) */
+  const wbx=await zip.file('xl/workbook.xml').async('string'),pa=/Phieu_KQ['"]?!\$A\$1:\$([A-Z]+)\$\d+/.exec(wbx);
+  const colN=L=>L.split('').reduce((n,ch)=>n*26+ch.charCodeAt(0)-64,0),last=pa?colN(pa[1]):8,cols=Array.from(doc.getElementsByTagName('col'));
+  let sum=0;cols.forEach(c=>{if(c.getAttribute('hidden')==='1')return;const a=+c.getAttribute('min'),b=Math.min(+c.getAttribute('max'),last);if(b>=a)sum+=(b-a+1)*(+c.getAttribute('width')||0);});
+  if(sum>90){const k=90/sum;cols.forEach(c=>{if(+c.getAttribute('min')<=last&&c.getAttribute('hidden')!=='1')c.setAttribute('width',String(Math.round((+c.getAttribute('width')||0)*k*100)/100));});
+    const dF=zip.file('xl/drawings/drawing1.xml');
+    if(dF){let dx=await dF.async('string');dx=dx.replace(/(<(?:xdr:)?oneCellAnchor>[\s\S]*?<(?:xdr:)?ext )cx="(\d+)" cy="(\d+)"/g,(m0,a,cx,cy)=>a+'cx="'+Math.round(cx*k)+'" cy="'+Math.round(cy*k)+'"');zip.file('xl/drawings/drawing1.xml',dx);}}
+  const ser=d=>{let x=new XMLSerializer().serializeToString(d);return /^<\?xml/.test(x)?x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'+x;};
+  zip.file(p,ser(doc));zip.file('xl/styles.xml',ser(stDoc));
 }
 async function buildTemplate(sample,tester,form,extra){
   if(!window.JSZip)throw new Error('Chưa tải được thư viện nén (JSZip).');
@@ -2148,6 +2221,7 @@ async function buildTemplate(sample,tester,form,extra){
     else if(f.sk&&f.sk.ops&&f.sk.ops.length){png=await skPng(f.sk);w=f.sk.w;h_=f.sk.h;}
     else if(extra){const k0=skNew('ngang');png=await skPng(k0,'Chưa có sơ đồ vị trí các điểm đo');w=k0.w;h_=k0.h;}
     if(png)await skEmbed(zip,png,w,h_);}
+  await patchPhieuCommon(zip,sample,extra);
   if(extra)await issuedParts(zip,extra);
   let wbx=await zip.file('xl/workbook.xml').async('string');
   wbx=wbx.replace(/<calcPr([^>]*?)\/>/,(x,a)=>'<calcPr'+a.replace(/\s*fullCalcOnLoad="[^"]*"/,'')+' fullCalcOnLoad="1"/>');
@@ -2514,7 +2588,7 @@ async function issuedParts(zip,x){
   const setC=(ref,txt)=>{const m=xml.match(new RegExp('<c r="'+ref+'"([^>]*?)(?:/>|>[\\s\\S]*?</c>)'));if(!m)return;
     const st=(m[1].match(/ s="\d+"/)||[''])[0];
     xml=xml.replace(m[0],()=>'<c r="'+ref+'"'+st+' t="inlineStr"><is><t xml:space="preserve">'+xesc(txt)+'</t></is></c>');};
-  if(x.tp_tu_thu){setC('D'+(R-2),'Người soát xét');setC('D'+R,toVwx(x.sx_ten||''));}
+  if(x.tp_tu_thu){setC('D'+R,toVwx(x.sx_ten||''));}
   const stX=await zip.file('xl/styles.xml').async('string');const SPT=(+((/<cellXfs count="(\d+)"/.exec(stX)||[])[1]||0))>60?60:0;
   const line=(r,txt)=>'<row r="'+r+'" ht="32" customHeight="1"><c r="C'+r+'" s="'+SPT+'" t="inlineStr"><is><t xml:space="preserve">'+xesc(txt)+'</t></is></c></row>';
   const sdl=[],cut=(t,n)=>t.length>n?t.slice(0,n-1)+'…':t;
@@ -5411,6 +5485,7 @@ pages['thong-ke']={render(root){
 
 /* ---- build log + errors */
 const BUILD_LOG=[
+['08/11/2026','B29','Claude','Chỉnh chung sheet Phieu_KQ của mọi biểu mẫu: lề in 4,1/2,2/1,7/0,5 cm, tỷ lệ 100 %; bỏ tiêu đề PHIẾU KẾT QUẢ THỬ NGHIỆM, ngày thử nghiệm, mã mẫu, thiết bị thử nghiệm; quy cách mẫu cố định; nhãn chữ thường; số báo cáo ghi giá trị sau khi cấp, canh trái; dòng ký thay bằng Quảng Trị, ngày tháng năm (ngày theo số báo cáo), hàng cách 65.','Đã kiểm thử'],
 ['08/11/2026','B28','Claude','Bỏ nhập nhiệt độ, độ ẩm phòng thử ở mọi mẫu trừ xi măng (form điện thoại, kiểm tra file tải lên, file Excel tạo ra: xóa ô và đặt mục Kiem_tra không áp dụng); file báo cáo tải về đặt tên BC.dd.mm.yyyy.stt. Đơn vị thi công (viết tắt). Công trình (viết tắt).xlsx.','Đã kiểm thử'],
 ['08/11/2026','B27','Claude','Sửa lỗi theo file V0.27.5: tab Tổng hợp quan trắc gốc bỏ Trung bình, Nhỏ nhất, Lớn nhất; Hồ sơ lưu trữ bỏ nhật ký thao tác; thêm in Phiếu nhận mẫu (có khối ký người nhận mẫu và khách hàng) ở danh sách phiếu đang thực hiện và sau khi tiếp nhận.','Đã kiểm thử'],
 ['07/11/2026','B26','Claude','Phân quyền riêng cho Phó giám đốc Phan Thanh Giàn (vai trò pgd): chỉ xem bảng kê thanh toán, công nợ, tổng hợp thanh toán của các phòng; không soát xét, phê duyệt phiếu, không có Sửa đổi phiếu, Thiết bị, Hồ sơ lưu trữ, không ký duyệt bảng kê.','Đã kiểm thử'],
