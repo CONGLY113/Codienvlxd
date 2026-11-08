@@ -1421,6 +1421,27 @@ function ctFit(pts){
   const o={a,b,c,xb,ok:false,wv:null,gv:null};
   if(a<0){const xv=-b/(2*a),wv=xb+xv;if(wv>=wmin&&wv<=wmax){o.ok=true;o.wv=wv;o.gv=c-b*b/(4*a);}}
   return o;}
+/* khoảng trục biểu đồ đường đầm chặt: X theo độ ẩm (±0,5 làm tròn), Y theo dung trọng khô (làm tròn 0,02); dùng chung cho biểu đồ trong phiếu Excel và biểu đồ trên màn hình */
+function dmBounds(pts,fit){
+  if(!pts||!pts.length)return null;
+  const xs=pts.map(q=>q.w),ys=pts.map(q=>q.gk).concat(fit&&fit.ok?[fit.gv]:[]);
+  return{xmin:Math.floor(Math.min(...xs))-0.5,xmax:Math.ceil(Math.max(...xs))+0.5,ymin:+(Math.floor(Math.min(...ys)/0.02+1e-9)*0.02).toFixed(3),ymax:+(Math.ceil(Math.max(...ys)/0.02-1e-9)*0.02).toFixed(3)};}
+/* biểu đồ SVG "Đường đầm chặt tiêu chuẩn": điểm đo, đường parabol bậc 2, cực trị (γkmax, Wo); lưới đứt nét, trục theo mẫu */
+function dmSvg(pts){
+  pts=(pts||[]).filter(x=>x&&x.gk!=null&&x.w!=null);if(pts.length<2)return '';
+  const fit=ctFit(pts.map(x=>[x.w,x.gk])),b=dmBounds(pts,fit),W=360,H=250,L=48,R=12,T=24,B=36;
+  const X=v=>L+(v-b.xmin)/(b.xmax-b.xmin)*(W-L-R),Y=v=>H-B-(v-b.ymin)/(b.ymax-b.ymin)*(H-B-T),f=v=>v.toFixed(1);
+  const xs=(b.xmax-b.xmin)>14?2:1,ysx=(b.ymax-b.ymin)/0.02>10?0.05:0.02;let o='';
+  for(let v=b.xmin;v<=b.xmax+1e-9;v+=xs)o+='<line x1="'+f(X(v))+'" y1="'+f(Y(b.ymax))+'" x2="'+f(X(v))+'" y2="'+f(Y(b.ymin))+'" stroke="#000" stroke-width=".5" stroke-dasharray="3 2"/><text x="'+f(X(v))+'" y="'+(H-B+12)+'" font-size="8" text-anchor="middle" font-family="Arial">'+fnum(v,1)+'</text>';
+  for(let v=b.ymin;v<=b.ymax+1e-9;v+=ysx)o+='<line x1="'+f(X(b.xmin))+'" y1="'+f(Y(v))+'" x2="'+f(X(b.xmax))+'" y2="'+f(Y(v))+'" stroke="#000" stroke-width=".5" stroke-dasharray="3 2"/><text x="'+(L-4)+'" y="'+f(Y(v)+3)+'" font-size="8" text-anchor="end" font-family="Arial">'+fnum(v,3)+'</text>';
+  o+='<rect x="'+L+'" y="'+T+'" width="'+(W-L-R)+'" height="'+(H-B-T)+'" fill="none" stroke="#000"/>';
+  if(fit){const w0=Math.min(...pts.map(q=>q.w)),w1=Math.max(...pts.map(q=>q.w)),n=60,seg=[];
+    for(let i=0;i<=n;i++){const w=w0+(w1-w0)*i/n,x=w-fit.xb,y=fit.a*x*x+fit.b*x+fit.c;if(y>=b.ymin&&y<=b.ymax)seg.push(f(X(w))+','+f(Y(y)));}
+    if(seg.length>1)o+='<polyline fill="none" stroke="#000" stroke-width="1.3" points="'+seg.join(' ')+'"/>';}
+  pts.forEach(q=>{o+='<circle cx="'+f(X(q.w))+'" cy="'+f(Y(q.gk))+'" r="3.2" fill="#000080"/><text x="'+f(X(q.w)+5)+'" y="'+f(Y(q.gk)+10)+'" font-size="7" font-family="Arial">'+fnum(q.gk,3)+'</text>';});
+  if(fit&&fit.ok){const px=X(fit.wv),py=Y(fit.gv);o+='<path d="M'+f(px)+','+f(py-6)+' l5,6 l-5,6 l-5,-6 z" fill="#f00"/><text x="'+f(Math.min(Math.max(px,L+70),W-R-70))+'" y="'+f(py+24)+'" font-size="8" font-weight="700" fill="#c00000" text-anchor="middle" font-family="Arial">γkmax = '+fnum(fit.gv,3)+' · Wo = '+fnum(fit.wv,1)+' %</text>';}
+  o+='<text x="'+(W/2)+'" y="13" font-size="10" font-weight="700" text-anchor="middle" font-family="Arial">Đường đầm chặt tiêu chuẩn</text><text x="'+((L+W-R)/2)+'" y="'+(H-6)+'" font-size="9" font-weight="700" text-anchor="middle" font-family="Arial">Độ ẩm (%)</text><text x="11" y="'+((T+H-B)/2)+'" font-size="9" font-weight="700" text-anchor="middle" font-family="Arial" transform="rotate(-90 11 '+((T+H-B)/2)+')">Dung trọng khô (g/cm³)</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:420px;border:1px solid #000;border-radius:4px;background:#fff" role="img" aria-label="Đường đầm chặt tiêu chuẩn">'+o+'</svg>';}
 const CT_N=7,CT_HC=['M','S','m1','m2','q1','q2','B','C','A'];
 function rcCT(r){
   const n=nzn,V=n(r.V),cm=n(r.cm),rows=[];
@@ -1462,6 +1483,8 @@ function rcCT(r){
     sections:d=>{const n=cnt(d),out=[sec1('Cối đầm','Thể tích và khối lượng cối đầm tiêu chuẩn.',[['',[['V','Thể tích cối (cm³)'],['cm','Khối lượng cối (g)']]]])];
       for(let i=0;i<n;i++)out.push(sec1('Điểm đầm nén '+(i+1),'Mỗi điểm một độ ẩm khác nhau.',[['',[['mt_'+i,'KL cối + đất ướt (g)'],['ma_'+i,'KL đất ướt + hộp (g)'],['mk_'+i,'KL đất khô + hộp (g)'],['mh_'+i,'KL hộp (g)']]]],
         dd=>{const x=rcCT(dd).rows.find(y=>y.i===i);return(!x||x.gk==null)?null:['γk',fnum(x.gk,3)+' g/cm³','W = '+fnum(x.w,1)+' % · γ ướt '+fnum(x.gw,3),false];}));
+      out.push(Object.assign(sec1('Đường đầm chặt tiêu chuẩn','Biểu đồ tự vẽ khi nhập từ 3 điểm trở lên; γkmax và Wo lấy tại cực trị của đường parabol bậc 2 qua các điểm.',[],dd=>{const r=rcCT(dd);if(r.n<3)return null;
+        return r.fit&&r.fit.ok?['Cực trị',fnum(r.fit.gv,3)+' g/cm³',' · Wo = '+fnum(r.fit.wv,1)+' %',false]:['Chưa có cực đại','',' trong khoảng đo: thêm điểm ở phía độ ẩm cao hơn hoặc thấp hơn',true];}),{chart:dd=>dmSvg(rcCT(dd).rows)}));
       out.push(sec1('Hiệu chỉnh hạt lớn hơn 19 mm (nếu mẫu có)','Nhập đủ 9 số liệu hoặc để trống hết nếu không cần hiệu chỉnh.',[['Hàm lượng hạt D > 19 mm',[['hc_M','Tổng khối lượng mẫu (g)'],['hc_S','KL mẫu sót trên sàng 19 mm (g)']]],['Độ ẩm hạt tiêu chuẩn',[['hc_m1','Khối lượng mẫu ướt m1 (g)'],['hc_m2','Khối lượng mẫu khô m2 (g)']]],['Độ ẩm hạt quá cỡ',[['hc_q1',"Khối lượng mẫu ướt m1' (g)"],['hc_q2',"Khối lượng mẫu khô m2' (g)"]]],['Tỷ trọng khối hạt quá cỡ',[['hc_B','Khô bề mặt B (g)'],['hc_C','Cân trong nước C (g)'],['hc_A','Khô hoàn toàn A (g)']]]],
         dd=>{const r=rcCT(dd);if(!r.n)return null;return['Kết quả',fnum(r.gk,3)+' g/cm³ · Wo '+fnum(r.w,1)+' %',r.hc?'đã hiệu chỉnh (Ptc '+fnum(r.Ptc,1)+' %, Pqc '+fnum(r.Pqc,1)+' %, G '+fnum(r.G,2)+')':'chưa hiệu chỉnh'+(r.hcCount?' (còn thiếu '+(9-r.hcCount)+' số liệu hiệu chỉnh)':''),r.peak<=1||r.peak>=r.n||(r.hcCount>0&&!r.hc)];}));
       return out;},
@@ -1472,14 +1495,11 @@ function rcCT(r){
       cnt(d)>1?h('button',{class:'btn','data-act':'ct-del',onclick:()=>{const i=cnt(d)-1;keysOf(i).forEach(k=>{delete d[k];});d.n=i;again();}},'Bớt một điểm'):null),
     verify:(raw)=>{const r=rcCT(raw),W='Lưu ý khi kiểm tra: ',out=[];
       if(r.n>=3&&(r.peak<=1||r.peak>=r.n))out.push({label:W+'Điểm đỉnh của đường cong không nằm ở đầu hoặc cuối',state:'warn',note:'Dung trọng khô lớn nhất ở điểm '+r.peak+'/'+r.n+': chưa bao được đỉnh, nên thêm điểm đầm nén.'});
+      if(r.n>=3&&r.peak>1&&r.peak<r.n&&!(r.fit&&r.fit.ok))out.push({label:W+'Đường parabol chưa có cực đại trong khoảng đo',state:'warn',note:'Không tìm được cực trị của đường bậc 2 nằm trong khoảng độ ẩm đã đo: γkmax, Wo lấy ở điểm lớn nhất. Nên đầm thêm điểm ở phía độ ẩm cao hơn/thấp hơn.'});
       if(r.hc&&r.Pqc>30)out.push({label:W+'Hạt quá cỡ không quá 30 %',state:'warn',note:'Hạt lớn hơn 19 mm chiếm '+fnum(r.Pqc,1)+' %.'});
       return out;},
     body:r=>{const rows=r.rows||[];
-      const pts=rows.filter(x=>x.gk!=null&&x.w!=null),svg=(()=>{if(pts.length<2)return '';const W=320,H=170,L=44,B=28,xs=pts.map(p=>p.w),ys=pts.map(p=>p.gk),x0=Math.min(...xs)-0.5,x1=Math.max(...xs)+0.5,y0=Math.min(...ys)-0.03,y1=Math.max(...ys)+0.03;
-        const X=v=>L+(v-x0)/(x1-x0)*(W-L-8),Y=v=>H-B-(v-y0)/(y1-y0)*(H-B-8);
-        return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:360px;border:1px solid #ccc;border-radius:6px;background:#fff" role="img" aria-label="Đường cong đầm nén"><polyline fill="none" stroke="#0050c8" stroke-width="2" points="'+pts.map(p=>X(p.w).toFixed(1)+','+Y(p.gk).toFixed(1)).join(' ')+'"/>'+pts.map(p=>'<circle cx="'+X(p.w).toFixed(1)+'" cy="'+Y(p.gk).toFixed(1)+'" r="3.5" fill="'+(p.gk===r.gk0?'#d00000':'#0050c8')+'"/>').join('')+
-          '<text x="'+(W/2)+'" y="'+(H-6)+'" font-size="10" text-anchor="middle" fill="#444">Độ ẩm W (%)</text><text x="10" y="'+(H/2)+'" font-size="10" fill="#444" transform="rotate(-90 10 '+(H/2)+')" text-anchor="middle">γk (g/cm³)</text>'+
-          '<text x="'+L+'" y="'+(H-B+12)+'" font-size="9" fill="#666">'+fnum(x0,1)+'</text><text x="'+(W-8)+'" y="'+(H-B+12)+'" font-size="9" text-anchor="end" fill="#666">'+fnum(x1,1)+'</text><text x="'+(L-4)+'" y="'+(Y(y1)+3)+'" font-size="9" text-anchor="end" fill="#666">'+fnum(y1,2)+'</text><text x="'+(L-4)+'" y="'+Y(y0)+'" font-size="9" text-anchor="end" fill="#666">'+fnum(y0,2)+'</text></svg>';})();
+      const svg=dmSvg(rows);
       return h('div',null,
         h('p',{style:'font-size:12px;margin:6px 0'},h('b',null,'Phương pháp: '),'đầm nén tiêu chuẩn 22TCN 333-06 (P.P II-D) · thể tích cối '+fnum(r.V,0)+' cm³ · khối lượng cối '+fnum(r.cm,0)+' g'),
         h('table',null,h('thead',null,h('tr',null,['Thí nghiệm số','KL cối + đất ướt (g)','KL đất ướt (g)','Dung trọng ướt (g/cm³)','KL ướt + hộp (g)','KL khô + hộp (g)','KL hộp (g)','Độ ẩm W (%)','Dung trọng khô (g/cm³)'].map(x=>h('th',null,x)))),
@@ -1717,7 +1737,7 @@ Object.assign(NGUON_LBL,{BU_LONG:{l:'Nhà cung cấp, nơi sản xuất',ph:'Ví
   G.results=(rc,raw)=>({n:rc.n,gk0:rc.gk0,w0:rc.w0,peak:rc.peak,gk:rc.gk,w:rc.w,hc:false,V:rc.V,cm:rc.cm,rows:rc.rows.map(x=>({mt:x.mt,mw:x.mw,gw:x.gw,ma:x.ma,mk:x.mk,mh:x.mh,w:x.w,gk:x.gk}))});
   const ph=Object.assign({},T0.ph);CT_HC.forEach(k=>{delete ph['hc_'+k];});G.ph=ph;
   G.sections=d=>{const out=T0.sections(d);out.pop();
-    out.push(sec1('Kết quả tương quan','Dung trọng khô lớn nhất γkmax và độ ẩm tối ưu Wo lấy tại điểm có dung trọng khô lớn nhất. Đầm chặt cát không hiệu chỉnh hạt quá cỡ.',[],dd=>{const r=rcCT(st(dd));return r.n?['Kết quả',fnum(r.gk0,3)+' g/cm³ · Wo '+fnum(r.w0,1)+' %','',r.peak<=1||r.peak>=r.n]:null;}));return out;};
+    out.push(sec1('Kết quả tương quan','Dung trọng khô lớn nhất γkmax và độ ẩm tối ưu Wo lấy tại cực trị của đường parabol bậc 2. Đầm chặt cát không hiệu chỉnh hạt quá cỡ.',[],dd=>{const r=rcCT(st(dd));return r.n?['Kết quả',fnum(r.gk0,3)+' g/cm³ · Wo '+fnum(r.w0,1)+' %','',r.peak<=1||r.peak>=r.n]:null;}));return out;};
   G.need=d=>T0.need(st(d));G.total=d=>T0.total(st(d));
   G.valid=(d,rc)=>rc.V>0&&rc.cm>0&&rc.n>=5&&rc.rows.every(x=>x.gk!=null);
   G.verify=raw=>T0.verify(st(raw));
@@ -2538,8 +2558,7 @@ async function patchPhieuCommon(zip,sample,extra,form){
   if(PK_LAYOUT[loaiOf(sample)])PK_LAYOUT[loaiOf(sample)](CTX);
   if(CTX.chart&&DM_CODES.indexOf(loaiOf(sample))>=0){let bd={};
     try{const G=gt(sample),d=form&&form.d;if(G&&d){const r=G.rc(d),pts=(r.rows||[]).filter(x=>x.gk!=null&&x.w!=null);
-      if(pts.length){const xs=pts.map(q=>q.w),ys=pts.map(q=>q.gk).concat(r.fit&&r.fit.ok?[r.fit.gv]:[]);
-        bd={xmin:Math.floor(Math.min(...xs))-0.5,xmax:Math.ceil(Math.max(...xs))+0.5,ymin:+(Math.floor(Math.min(...ys)/0.02+1e-9)*0.02).toFixed(3),ymax:+(Math.ceil(Math.max(...ys)/0.02-1e-9)*0.02).toFixed(3)};}}}catch(e){console.warn('dmChart',e);}
+      if(pts.length)bd=dmBounds(pts,r.fit)||{};}}catch(e){console.warn('dmChart',e);}
     await dmAddChart(zip,CTX.chart,bd);}
   if(CTX.lastCol){let w0=await zip.file('xl/workbook.xml').async('string');w0=w0.replace(/(Phieu_KQ['"]?!\$A\$1:\$)[A-Z]+(\$\d+)/,(m0,a,b)=>a+CTX.lastCol+b);zip.file('xl/workbook.xml',w0);}
   /* 4. trang in: lề 4,1 / 2,2 / 1,7 / 0,5 cm, tỷ lệ 100 % */
@@ -3627,17 +3646,18 @@ pages['nhap-so-lieu']={public:true,render(root){
     MF={id:s.id,d:Object.assign({d0:todayISO(),d1:todayISO(),tc:null,ha:null,tt:'',dv:[]},(G&&G.defaults)||{},(G&&G.init?G.init(s):{}),pick||{})};}
   const d=MF.d,save=()=>{d._at=new Date().toISOString();try{localStorage.setItem('ptn_mf_'+s.id,JSON.stringify(d));}catch(e){}
     clearTimeout(mfTimer);mfTimer=setTimeout(()=>safe(()=>Data.update(sp(s.id),{ban_nhap:mfRemote(d)})),1800);};
-  const bar=h('i'),cnt=h('span',{class:'small muted'}),lives=[];
+  const bar=h('i'),cnt=h('span',{class:'small muted'}),lives=[],charts=[];
   const KEYS=isDA?Object.keys(MF_MAP_DA):MF_KEYS;const need=()=>G?G.need(d):KEYS.filter(k=>typeof d[k]!=='number').length;const totalK=()=>G?G.total(d):KEYS.length;
   const upd=()=>{const n=totalK()-need();bar.style.width=Math.round(n/totalK()*100)+'%';cnt.textContent=n+'/'+totalK()+' số liệu';
+    charts.forEach(([el,fn])=>{const sv=fn(d);el.innerHTML=sv||'';el.style.display=sv?'':'none';});
     lives.forEach(([el,fn])=>{const v=fn(d);el.replaceChildren(...(v?[h('span',null,v[0]+' '),h('b',null,v[1]),h('span',{class:'small'},v[2])]:[h('span',{class:'muted'},'Nhập đủ số liệu để xem kết quả tạm tính')]));el.dataset.bad=v&&v[3]?'1':'0';});};
   const num_=k=>h('input',{type:'text',inputmode:'decimal',autocomplete:'off',placeholder:(G?G.ph:(isDA?MF_PH_DA:MF_PH))[k]||'',value:typeof d[k]==='number'?String(d[k]).replace('.',','):'',oninput:e=>{const t=e.target.value.replace(',','.').trim();d[k]=t!==''&&!isNaN(+t)?+t:null;save();upd();}});
   const fld=(k,l)=>{const kd=G?G.kind(k):'num';if(kd==='text')return h('label',null,l,h('input',{type:'text',autocomplete:'off',placeholder:G.ph[k]||'',value:d[k]||'',oninput:e=>{d[k]=e.target.value;save();upd();}}));if(kd==='bend')return h('label',null,l,h('select',{onchange:e=>{d[k]=e.target.value;save();upd();}},[['','Chọn…'],['Không nứt','Không nứt'],['Nứt','Nứt']].map(o=>h('option',{value:o[0],selected:(d[k]||'')===o[0]},o[1]))));if(kd==='sel')return h('label',null,l,h('select',{onchange:e=>{d[k]=e.target.value||null;save();upd();}},[['','Chọn…']].concat(G.opts[k].map(x=>[x,x])).map(o=>h('option',{value:o[0],selected:(d[k]||'')===o[0]},o[1]))));
     if(kd==='numsel')return h('label',null,l,h('select',{onchange:e=>{d[k]=e.target.value===''?null:+e.target.value;save();upd();}},[['','Chọn…']].concat(G.opts[k].map(x=>[String(x[0]),x[1]])).map(o=>h('option',{value:o[0],selected:String(d[k]==null?'':d[k])===o[0]},o[1]))));
     return h('label',null,l,num_(k));};
-  const secs=(G?G.sections(d):(isDA?MF_SEC_DA:MF_SEC)).map(c=>{const lv=c.live?h('div',{class:'mf-live'}):null;if(lv)lives.push([lv,c.live]);
+  const secs=(G?G.sections(d):(isDA?MF_SEC_DA:MF_SEC)).map(c=>{const lv=c.live?h('div',{class:'mf-live'}):null;if(lv)lives.push([lv,c.live]);const cv=c.chart?h('div',{class:'dm-chart',style:'margin-top:8px;display:none'}):null;if(cv)charts.push([cv,c.chart]);
     return h('section',{class:'card mf-sec'},h('h3',null,c.t),h('span',{class:'small muted'},c.s),(!isDA&&!G&&MF_NOTE[c.t])?h('div',{class:'small muted',style:'margin-top:4px'},MF_NOTE[c.t]):null,
-      c.node?c.node(d,()=>{save();render();},s):null,c.g.map(([gt,fs])=>h('div',{class:'mf-g'},gt?h('b',null,gt):null,h('div',{class:'mf-f'},fs.map(([k,l])=>fld(k,l))))),lv);});
+      c.node?c.node(d,()=>{save();render();},s):null,c.g.map(([gt,fs])=>h('div',{class:'mf-g'},gt?h('b',null,gt):null,h('div',{class:'mf-f'},fs.map(([k,l])=>fld(k,l))))),lv,cv);});
   const dvBox=h('div'),dvIn=h('input',{type:'text',list:'mf-dev',placeholder:'Mã thiết bị, ví dụ TB001',style:'text-transform:uppercase'});
   const drawDv=()=>dvBox.replaceChildren(...(d.dv||[]).map(c=>{const v=DEV_BY_ID[c];return h('span',{class:'mf-chip'},c+(v?' '+v.name.slice(0,22):' (không có)'),v?devPill(v):null,h('button',{onclick:()=>{d.dv=d.dv.filter(x=>x!==c);save();drawDv();}},'×'));}));
   const addDv=()=>{const c=dvIn.value.trim().toUpperCase();if(!c)return;if(!DEV_BY_ID[c]){toast('Không có mã thiết bị '+c+' trong danh mục.','bad');return;}
