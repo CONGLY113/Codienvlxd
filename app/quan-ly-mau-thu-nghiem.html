@@ -291,6 +291,7 @@ td.r,th.r{text-align:right}
 .tbl-wrap td .row .btn.sm{white-space:nowrap}
 
 /* phieu */
+.pkv-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:#fff;padding:6px 0}.pkv table{margin:0;border-spacing:0;width:auto;font-size:inherit}.pkv td{box-sizing:border-box;border:0;padding:0 2px;color:#000}.pkv tbody tr:hover td{background-color:inherit}
 .phieu{background:#fff;color:#111;border:1px solid var(--line);border-radius:6px;padding:22px 26px;font-family:'Times New Roman',Times,serif;font-size:13.5px;line-height:1.45}
 .phieu h2{font-size:17px;text-align:center;margin:10px 0 2px;color:#111;font-weight:700}
 .phieu .c{text-align:center} .phieu table{font-size:13px;margin-top:6px} .phieu th{background:#e9e9e9;color:#111;border:1px solid #888;text-align:center}
@@ -3100,7 +3101,485 @@ function phieuStamp(s){const p=s.phieu;if(!p)return null;
     h('div',null,h('b',null,'Số báo cáo '+phieuNo(s))),
     h('div',null,p.url?'Tra cứu: '+p.url:'Tra cứu: nhập số báo cáo ở trang Tra cứu của web app.')));}
 
+/* ====================================================================== 0.27.6 B7b: HIỂN THỊ ĐÚNG SHEET Phieu_KQ
+   Hồ sơ lưu trữ hiển thị chính sheet Phieu_KQ của file phiếu đã phát hành (cùng ô, ô gộp, độ rộng, viền, ảnh QR, biểu đồ),
+   không dựng lại bằng tay từng loại mẫu. Gồm: đọc xlsx (JSZip), bộ tính công thức (khoảng 30 hàm Excel dùng trong biểu mẫu),
+   bộ vẽ bảng HTML từ ô/kiểu/ô gộp, bộ vẽ biểu đồ phân tán (scatter) sang SVG. */
+const PKV=(()=>{
+  const colN=s=>{let n=0;for(const ch of s)n=n*26+ch.charCodeAt(0)-64;return n;};
+  const colL=n=>{let s='';while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26;}return s;};
+  class XErr{constructor(e){this.e=e;}}
+  const isErr=v=>v&&typeof v==='object'&&v.err!==undefined;
+  const isRng=v=>v&&typeof v==='object'&&v.rng===true;
+  const isArr=v=>v&&typeof v==='object'&&Array.isArray(v.arr);
+  const fail=e=>{throw new XErr(e);};
+  const numStr=n=>{if(!isFinite(n))return n>0?'#NUM!':'#NUM!';let t=String(+n.toPrecision(15));if(/e/i.test(t)){t=(+n).toFixed(10).replace(/0+$/,'').replace(/\.$/,'');}return t.replace('.',',');};
+  const roundHalf=(x,d)=>{const k=Math.pow(10,d||0),a=Math.abs(x)*k;const r=Math.round(+(a.toPrecision(15)));return Math.sign(x)*r/k;};
+  const serialToDate=n=>new Date(Date.UTC(1899,11,30)+Math.floor(n)*86400000+Math.round((n%1)*86400000));
+  const pad2=n=>(n<10?'0':'')+n;
+  const grp=s=>s.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  function fmtFixed(n,d,nocomma){const r=roundHalf(n,d);const neg=r<0;let s=Math.abs(r).toFixed(Math.max(0,d));let [i,f]=s.split('.');if(!nocomma)i=grp(i);return(neg?'-':'')+i+(f?','+f:'');}
+  function fmtDate(n,code){const d=serialToDate(n);let s=code.replace(/"([^"]*)"/g,'\u0001$1\u0002');
+    s=s.replace(/yyyy|yy|mm|m|dd|d|hh|h|ss|s/gi,t=>{switch(t.toLowerCase()){case'yyyy':return d.getUTCFullYear();case'yy':return String(d.getUTCFullYear()).slice(-2);case'mm':return pad2(d.getUTCMonth()+1);case'm':return d.getUTCMonth()+1;case'dd':return pad2(d.getUTCDate());case'd':return d.getUTCDate();case'hh':return pad2(d.getUTCHours());case'h':return d.getUTCHours();case'ss':return pad2(d.getUTCSeconds());default:return d.getUTCSeconds();}});
+    return s.replace(/[\u0001\u0002\\_]/g,'');}
+  const BUILTIN={0:'General',1:'0',2:'0.00',3:'#,##0',4:'#,##0.00',9:'0%',10:'0.00%',14:'dd/mm/yyyy',15:'d-mmm-yy',16:'d-mmm',17:'mmm-yy',22:'dd/mm/yyyy hh:mm',37:'#,##0',38:'#,##0',39:'#,##0.00',40:'#,##0.00',49:'@'};
+  function fmtNum(n,code){
+    if(!code||code==='General')return numStr(+n.toPrecision(11)===n?n:+n.toPrecision(11));
+    if(code==='@')return numStr(n);
+    let sec=code.split(';')[0].replace(/\[[^\]]*\]/g,'');
+    const bare=sec.replace(/"[^"]*"/g,'').replace(/\\./g,'');
+    if(/[ymdhs]/i.test(bare)&&!/[0#]/.test(bare))return fmtDate(n,sec);
+    const m=/([#0?,]*[0#?](?:\.[0#?]*)?|\.[0#?]+)/.exec(bare);if(!m)return numStr(n);
+    const ph=m[1],pre=bare.slice(0,bare.indexOf(ph)),suf=bare.slice(bare.indexOf(ph)+ph.length);
+    const dec=(ph.split('.')[1]||'').length,pct=/%/.test(suf+pre),comma=/,/.test(ph.split('.')[0]);
+    let v=pct?n*100:n;const r=roundHalf(v,dec);let s=Math.abs(r).toFixed(dec);let[i,f]=s.split('.');
+    const minI=(ph.split('.')[0].match(/0/g)||[]).length;if(minI===0&&+i===0&&dec>0)i='';while(i.length<minI)i='0'+i;
+    if(comma)i=grp(i);
+    const lit=t=>sec.includes('"')?(sec.match(new RegExp('"([^"]*)"[^"]*'+(t==='p'?'':'$')))||[])[1]||'':'';
+    return(r<0?'-':'')+(pre.replace(/[_\\*]./g,'')||'')+i+(f?','+f:'')+suf.replace(/[_\\*]./g,'');
+  }
+  /* ---------- tokenizer / parser ---------- */
+  function tokenize(f){
+    const T=[];let i=0;const n=f.length;
+    while(i<n){const ch=f[i];
+      if(/\s/.test(ch)){i++;continue;}
+      if(ch==='"'){let j=i+1,s='';while(j<n){if(f[j]==='"'){if(f[j+1]==='"'){s+='"';j+=2;continue;}break;}s+=f[j++];}T.push({t:'s',v:s});i=j+1;continue;}
+      let m;const rest=f.slice(i);
+      if((m=/^(?:'[^']+'|[A-Za-z_][A-Za-z0-9_\.]*)!\$?[A-Z]{1,3}\$?\d+(?::\$?[A-Z]{1,3}\$?\d+)?/.exec(rest))){T.push({t:'ref',v:m[0]});i+=m[0].length;continue;}
+      if((m=/^\$?[A-Z]{1,3}\$?\d+(?::\$?[A-Z]{1,3}\$?\d+)?(?![A-Za-z0-9_\(])/.exec(rest))){T.push({t:'ref',v:m[0]});i+=m[0].length;continue;}
+      if((m=/^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/.exec(rest))){T.push({t:'n',v:parseFloat(m[0])});i+=m[0].length;continue;}
+      if((m=/^[A-Za-z_][A-Za-z0-9_\.]*/.exec(rest))){const nx=rest.slice(m[0].length).trimStart()[0];T.push({t:nx==='('?'fn':'id',v:m[0]});i+=m[0].length;continue;}
+      if((m=/^(<=|>=|<>)/.exec(rest))){T.push({t:'op',v:m[0]});i+=2;continue;}
+      if('+-*/^&=<>%'.includes(ch)){T.push({t:'op',v:ch});i++;continue;}
+      if(ch==='('||ch===')'){T.push({t:ch});i++;continue;}
+      if(ch===','||ch===';'){T.push({t:','});i++;continue;}
+      throw new Error('token '+ch+' @'+i+' in '+f);}
+    return T;
+  }
+  function parseF(f){
+    const T=tokenize(f);let p=0;const pk=()=>T[p],nx=()=>T[p++];
+    const isOp=(...o)=>pk()&&pk().t==='op'&&o.includes(pk().v);
+    function cmp(){let l=cat();while(isOp('=','<>','<','>','<=','>=')){const o=nx().v;l={t:'bin',o,l,r:cat()};}return l;}
+    function cat(){let l=add();while(isOp('&')){nx();l={t:'bin',o:'&',l,r:add()};}return l;}
+    function add(){let l=mul();while(isOp('+','-')){const o=nx().v;l={t:'bin',o,l,r:mul()};}return l;}
+    function mul(){let l=pow();while(isOp('*','/')){const o=nx().v;l={t:'bin',o,l,r:pow()};}return l;}
+    function pow(){let l=un();while(isOp('^')){nx();l={t:'bin',o:'^',l,r:un()};}return l;}
+    function un(){if(isOp('-','+')){const o=nx().v;const x=un();return o==='-'?{t:'un',x}:x;}return pct();}
+    function pct(){let x=prim();while(isOp('%')){nx();x={t:'bin',o:'/',l:x,r:{t:'n',v:100}};}return x;}
+    function prim(){const k=nx();if(!k)throw new Error('eof in '+f);
+      if(k.t==='n')return{t:'n',v:k.v};if(k.t==='s')return{t:'s',v:k.v};
+      if(k.t==='ref')return{t:'ref',v:k.v};
+      if(k.t==='('){const e=cmp();if(!pk()||pk().t!==')')throw new Error('paren in '+f);nx();return e;}
+      if(k.t==='id'){const u=k.v.toUpperCase();if(u==='TRUE')return{t:'b',v:true};if(u==='FALSE')return{t:'b',v:false};return{t:'name',v:k.v};}
+      if(k.t==='fn'){nx();const a=[];if(pk().t===')'){nx();return{t:'fn',n:k.v.toUpperCase(),a};}
+        for(;;){if(pk()&&(pk().t===','||pk().t===')')){a.push({t:'blank'});}else a.push(cmp());const q=nx();if(q.t===')')break;if(q.t!==',')throw new Error('args in '+f);}
+        return{t:'fn',n:k.v.toUpperCase(),a};}
+      throw new Error('prim '+JSON.stringify(k)+' in '+f);}
+    const e=cmp();if(p<T.length)throw new Error('trailing in '+f);return e;
+  }
+  /* ---------- workbook model ---------- */
+  const resolvePath=(base,t)=>{if(t[0]==='/')return t.slice(1);const parts=base.split('/');parts.pop();for(const s of t.split('/')){if(s==='..')parts.pop();else if(s!=='.')parts.push(s);}return parts.join('/');};
+  async function load(u8){
+    const zip=await JSZip.loadAsync(u8),P=new DOMParser();
+    const rd=async p=>{const f=zip.file(p);return f?P.parseFromString(await f.async('string'),'application/xml'):null;};
+    const wbx=await rd('xl/workbook.xml'),relx=await rd('xl/_rels/workbook.xml.rels');
+    const rels={};for(const r of relx.getElementsByTagName('Relationship'))rels[r.getAttribute('Id')]=r.getAttribute('Target');
+    const sx=await rd('xl/sharedStrings.xml'),sst=sx?Array.from(sx.getElementsByTagName('si')).map(si=>Array.from(si.getElementsByTagName('t')).filter(t=>!t.parentNode||t.parentNode.nodeName!=='rPh').map(t=>t.textContent).join('')):[];
+    const wb={zip,sheets:{},order:[],names:{},styles:null,sst,fcache:new Map()};
+    /* styles */
+    const st=await rd('xl/styles.xml');
+    if(st){const S={numFmts:{},fonts:[],fills:[],borders:[],xfs:[]};
+      Array.from(st.getElementsByTagName('numFmt')).forEach(n=>{S.numFmts[n.getAttribute('numFmtId')]=n.getAttribute('formatCode');});
+      const kids=(tag)=>{const e=st.getElementsByTagName(tag)[0];return e?Array.from(e.children):[];};
+      S.fonts=kids('fonts').map(f=>{const g=n=>f.getElementsByTagName(n)[0],c=g('color');return{b:!!g('b')&&g('b').getAttribute('val')!=='0',i:!!g('i')&&g('i').getAttribute('val')!=='0',u:!!g('u'),sz:g('sz')?+g('sz').getAttribute('val'):11,name:g('name')?g('name').getAttribute('val'):'Calibri',color:c?colorOf(c):null};});
+      S.fills=kids('fills').map(f=>{const pf=f.getElementsByTagName('patternFill')[0];if(!pf||pf.getAttribute('patternType')!=='solid')return null;const fg=pf.getElementsByTagName('fgColor')[0];return fg?colorOf(fg):null;});
+      S.borders=kids('borders').map(b=>{const o={};['left','right','top','bottom'].forEach(k=>{const e=b.getElementsByTagName(k)[0];if(e&&e.getAttribute('style')){const c=e.getElementsByTagName('color')[0];o[k]={s:e.getAttribute('style'),c:c?colorOf(c):'#000000'};}});return o;});
+      S.xfs=kids('cellXfs').map(x=>{const a=x.getElementsByTagName('alignment')[0];return{nf:+x.getAttribute('numFmtId')||0,font:+x.getAttribute('fontId')||0,fill:+x.getAttribute('fillId')||0,border:+x.getAttribute('borderId')||0,
+        h:a&&a.getAttribute('horizontal')||'',v:a&&a.getAttribute('vertical')||'',wrap:a&&(a.getAttribute('wrapText')==='1'||a.getAttribute('wrapText')==='true'),ind:a&&+a.getAttribute('indent')||0};});
+      wb.styles=S;}
+    for(const d of wbx.getElementsByTagName('definedName')){const nm=d.getAttribute('name');if(d.getAttribute('localSheetId')==null||/^_xlnm\./.test(nm))wb.names[nm+(d.getAttribute('localSheetId')!=null?'@'+d.getAttribute('localSheetId'):'')]=d.textContent;}
+    let idx=0;
+    for(const sh of Array.from(wbx.getElementsByTagName('sheet'))){
+      const name=sh.getAttribute('name'),rid=sh.getAttribute('r:id')||sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+      const path=resolvePath('xl/workbook.xml',rels[rid]||'');const doc=await rd(path);if(!doc){idx++;continue;}
+      const S={name,idx:idx++,path,cells:{},merges:[],cols:[],rows:{},defH:15,defW:null,hidden:sh.getAttribute('state')&&sh.getAttribute('state')!=='visible',drawing:null,rels:{}};
+      const sf=doc.getElementsByTagName('sheetFormatPr')[0];if(sf){if(sf.getAttribute('defaultRowHeight'))S.defH=+sf.getAttribute('defaultRowHeight');if(sf.getAttribute('defaultColWidth'))S.defW=+sf.getAttribute('defaultColWidth');}
+      Array.from(doc.getElementsByTagName('col')).forEach(c=>S.cols.push({min:+c.getAttribute('min'),max:+c.getAttribute('max'),w:c.getAttribute('width')?+c.getAttribute('width'):(S.defW||9.140625),hid:c.getAttribute('hidden')==='1'||c.getAttribute('hidden')==='true'}));
+      Array.from(doc.getElementsByTagName('row')).forEach(r=>{const rn=+r.getAttribute('r');S.rows[rn]={ht:r.getAttribute('ht')?+r.getAttribute('ht'):null,hid:r.getAttribute('hidden')==='1'||r.getAttribute('hidden')==='true'};
+        Array.from(r.getElementsByTagName('c')).forEach(c=>{const ref=c.getAttribute('r'),m=/^([A-Z]+)(\d+)$/.exec(ref);if(!m)return;const t=c.getAttribute('t'),vEl=c.getElementsByTagName('v')[0],fEl=c.getElementsByTagName('f')[0];
+          let v=null;
+          if(t==='inlineStr')v=Array.from(c.getElementsByTagName('t')).map(x=>x.textContent).join('');
+          else if(vEl&&vEl.textContent!==''){const raw=vEl.textContent;if(t==='s')v=sst[+raw];else if(t==='str')v=raw;else if(t==='b')v=raw==='1';else if(t==='e')v={err:raw};else{const nn=parseFloat(raw);v=isNaN(nn)?raw:nn;}}
+          if(v===''&&!fEl)v=null;
+          S.cells[ref]={c:colN(m[1]),r:+m[2],v,f:fEl?fEl.textContent:null,s:+c.getAttribute('s')||0};});});
+      Array.from(doc.getElementsByTagName('mergeCell')).forEach(m=>{const mm=/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(m.getAttribute('ref'));if(mm)S.merges.push({c1:colN(mm[1]),r1:+mm[2],c2:colN(mm[3]),r2:+mm[4]});});
+      const dr=doc.getElementsByTagName('drawing')[0];
+      if(dr){const rid2=dr.getAttribute('r:id')||dr.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+        const rp=path.replace(/worksheets\/([^\/]+)$/,'worksheets/_rels/$1.rels'),rx=await rd(rp);
+        if(rx)for(const r of rx.getElementsByTagName('Relationship'))if(r.getAttribute('Id')===rid2)S.drawing=resolvePath(path,r.getAttribute('Target'));}
+      wb.sheets[name]=S;wb.order.push(name);}
+    return wb;
+  }
+  function colorOf(c){
+    const rgb=c.getAttribute('rgb'),th=c.getAttribute('theme'),ix=c.getAttribute('indexed');
+    if(rgb)return'#'+rgb.slice(-6);
+    if(th!=null){const T=['FFFFFF','000000','E7E6E6','44546A','5B9BD5','ED7D31','A5A5A5','FFC000','4472C4','70AD47'];return'#'+(T[+th]||'000000');}
+    if(ix!=null){const I={0:'000000',1:'FFFFFF',2:'FF0000',3:'00FF00',4:'0000FF',5:'FFFF00',6:'FF00FF',7:'00FFFF',8:'000000',9:'FFFFFF',10:'FF0000',11:'00FF00',12:'0000FF',13:'FFFF00',14:'FF00FF',15:'00FFFF',22:'C0C0C0',64:'000000',65:'FFFFFF'};return'#'+(I[+ix]||'000000');}
+    return'#000000';}
+  /* ---------- evaluator ---------- */
+  const refRe=/^(?:('[^']+'|[A-Za-z_][A-Za-z0-9_\.]*)!)?\$?([A-Z]+)\$?(\d+)(?::\$?([A-Z]+)\$?(\d+))?$/;
+  function mkRef(txt,sheet){const m=refRe.exec(txt);if(!m)return null;let sh=m[1]?m[1].replace(/^'|'$/g,''):sheet;const c1=colN(m[2]),r1=+m[3],c2=m[4]?colN(m[4]):c1,r2=m[5]?+m[5]:r1;return{rng:true,sh,c1:Math.min(c1,c2),r1:Math.min(r1,r2),c2:Math.max(c1,c2),r2:Math.max(r1,r2)};}
+  function Evaluator(wb){
+    const self={wb};
+    const astOf=f=>{let a=wb.fcache.get(f);if(!a){a=parseF(f);wb.fcache.set(f,a);}return a;};
+    function cellVal(sh,c,r){
+      const S=wb.sheets[sh];if(!S)fail('#REF!');
+      const cell=S.cells[colL(c)+r];if(!cell)return null;
+      if(cell.f==null||cell.f==='')return cell.v;
+      if(cell.done)return cell.val;
+      if(cell.busy)return{err:'#REF!'};
+      cell.busy=true;
+      try{let v=ev(astOf(cell.f),{sh,arr:false});
+        if(isRng(v)||isArr(v))v=first(v);
+        cell.val=v;}
+      catch(e){if(e instanceof XErr)cell.val={err:e.e};else{cell.val={err:'#VALUE!'};if(typeof console!=='undefined')console.warn('formula',sh,colL(c)+r,e&&e.message);}}
+      cell.busy=false;cell.done=true;return cell.val;
+    }
+    self.cellVal=cellVal;
+    const first=v=>{if(isRng(v))return cellVal(v.sh,v.c1,v.r1);if(isArr(v))return v.arr[0][0];return v;};
+    const toArr=v=>{if(isArr(v))return v.arr;if(isRng(v)){const o=[];for(let r=v.r1;r<=v.r2;r++){const row=[];for(let c=v.c1;c<=v.c2;c++)row.push(cellVal(v.sh,c,r));o.push(row);}return o;}return[[v]];};
+    const flat=v=>{const o=[];toArr(v).forEach(r=>r.forEach(x=>o.push(x)));return o;};
+    const chk=v=>{if(isErr(v))fail(v.err);return v;};
+    const num=v=>{v=chk(v);if(v==null||v==='')return v===''?fail('#VALUE!'):0;if(typeof v==='boolean')return v?1:0;if(typeof v==='number')return v;const t=String(v).trim().replace(',','.');if(t!==''&&!isNaN(+t))return+t;fail('#VALUE!');};
+    const str=v=>{v=chk(v);if(v==null)return'';if(typeof v==='boolean')return v?'TRUE':'FALSE';if(typeof v==='number')return numStr(v);return String(v);};
+    const bool=v=>{v=chk(v);if(typeof v==='boolean')return v;if(v==null)return false;if(typeof v==='number')return v!==0;const u=String(v).toUpperCase();if(u==='TRUE')return true;if(u==='FALSE')return false;fail('#VALUE!');};
+    const rank=v=>typeof v==='number'?1:typeof v==='string'?2:3;
+    function cmp(a,b){a=chk(a);b=chk(b);
+      if(a==null)a=(typeof b==='string')?'':(typeof b==='boolean')?false:0;
+      if(b==null)b=(typeof a==='string')?'':(typeof a==='boolean')?false:0;
+      const ra=rank(a),rb=rank(b);if(ra!==rb)return ra<rb?-1:1;
+      if(ra===2){const x=a.toLowerCase(),y=b.toLowerCase();return x<y?-1:x>y?1:0;}
+      return a<b?-1:a>b?1:0;}
+    const mapArr=(fn,...vs)=>{const A=vs.map(toArr);const R=Math.max(...A.map(a=>a.length)),C=Math.max(...A.map(a=>a[0].length));const o=[];
+      for(let r=0;r<R;r++){const row=[];for(let c=0;c<C;c++)row.push(fn(...A.map(a=>{const rr=a.length===1?a[0]:a[r%a.length];return rr[rr.length===1?0:c%rr.length];})));o.push(row);}return{arr:o};};
+    const arrish=(v,ctx)=>isArr(v)||(isRng(v)&&ctx.arr);
+    const lift=(ctx,fn,...vs)=>vs.some(v=>arrish(v,ctx))?mapArr((...x)=>{try{return fn(...x);}catch(e){if(e instanceof XErr)return{err:e.e};throw e;}},...vs):fn(...vs.map(v=>first(v)));
+    function ev(n,ctx){
+      switch(n.t){
+        case'n':case's':case'b':return n.v;
+        case'blank':return null;
+        case'ref':{const r=mkRef(n.v,ctx.sh);if(!r)fail('#REF!');if(r.c1===r.c2&&r.r1===r.r2&&!ctx.arr)return cellVal(r.sh,r.c1,r.r1);return r;}
+        case'name':{const key=n.v;const def=wb.names[key];if(!def)fail('#NAME?');const r=mkRef(def,ctx.sh);if(!r)fail('#NAME?');if(r.c1===r.c2&&r.r1===r.r2&&!ctx.arr)return cellVal(r.sh,r.c1,r.r1);return r;}
+        case'un':{const x=ev(n.x,ctx);return lift(ctx,v=>-num(v),x);}
+        case'bin':{const l=ev(n.l,ctx),r=ev(n.r,ctx);
+          const op=n.o;return lift(ctx,(a,b)=>{
+            switch(op){case'+':return num(a)+num(b);case'-':return num(a)-num(b);case'*':return num(a)*num(b);
+              case'/':{const d=num(b);if(d===0)fail('#DIV/0!');return num(a)/d;}
+              case'^':return Math.pow(num(a),num(b));case'&':return str(a)+str(b);
+              case'=':return cmp(a,b)===0;case'<>':return cmp(a,b)!==0;case'<':return cmp(a,b)<0;case'>':return cmp(a,b)>0;case'<=':return cmp(a,b)<=0;case'>=':return cmp(a,b)>=0;}
+            fail('#VALUE!');},l,r);}
+        case'fn':return callFn(n,ctx);
+      }
+      fail('#VALUE!');
+    }
+    const nums=(args,ctx,dirty)=>{const o=[];for(const a of args){const v=ev(a,Object.assign({},ctx,{arr:false}));
+      if(isRng(v)||isArr(v)){flat(v).forEach(x=>{if(isErr(x))fail(x.err);if(typeof x==='number')o.push(x);});}
+      else if(a.t==='ref'||a.t==='name'){if(isErr(v))fail(v.err);if(typeof v==='number')o.push(v);}
+      else{o.push(num(v));}}
+      return o;};
+    const rngArg=(a,ctx)=>{const v=ev(a,Object.assign({},ctx,{arr:true}));return v;};
+    function crit(c){
+      if(typeof c==='number')return x=>typeof x==='number'&&x===c;
+      c=str(c);let m=/^(<=|>=|<>|<|>|=)?(.*)$/s.exec(c),op=m[1]||'=',val=m[2];
+      const nv=val.trim()!==''&&!isNaN(+val.replace(',','.'))?+val.replace(',','.'):null;
+      if(nv!=null){return x=>{if(typeof x!=='number'&&!(typeof x==='string'&&x.trim()!==''&&!isNaN(+x.replace(',','.')))){return op==='<>';}const y=typeof x==='number'?x:+x.replace(',','.');
+        switch(op){case'=':return y===nv;case'<>':return y!==nv;case'<':return y<nv;case'>':return y>nv;case'<=':return y<=nv;default:return y>=nv;}};}
+      const rx=new RegExp('^'+val.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.')+'$','i');
+      return x=>{if(op==='<>')return!(typeof x==='string'&&rx.test(x))&&!(x==null&&val==='');if(op!=='=')return typeof x==='string'&&(op==='<'?x.toLowerCase()<val.toLowerCase():op==='>'?x.toLowerCase()>val.toLowerCase():op==='<='?x.toLowerCase()<=val.toLowerCase():x.toLowerCase()>=val.toLowerCase());
+        if(val==='')return x==null||x==='';return typeof x==='string'&&rx.test(x);};}
+    function callFn(n,ctx){
+      const a=n.a,N=n.n;
+      const E=i=>ev(a[i],ctx);
+      switch(N){
+        case'IF':{const c=E(0);
+          if(arrish(c,ctx)){const t=a[1]?E(1):true,f=a.length>2?E(2):false;return mapArr((cc,tt,ff)=>{try{return bool(cc)?tt:ff;}catch(e){if(e instanceof XErr)return{err:e.e};throw e;}},c,t,f);}
+          const cv=first(c);if(bool(cv))return a[1]?(a[1].t==='blank'?0:E(1)):true;return a.length>2?(a[2].t==='blank'?0:E(2)):false;}
+        case'IFERROR':{try{const v=E(0);const f=first(v);if(isErr(f))return E(1);return v;}catch(e){if(e instanceof XErr)return E(1);throw e;}}
+        case'AND':case'OR':{let res=N==='AND',any=false;for(const x of a){const v=ev(x,Object.assign({},ctx,{arr:false}));
+            const vals=(isRng(v)||isArr(v))?flat(v).filter(y=>typeof y==='boolean'||typeof y==='number'):[v];
+            for(const y of vals){const b=bool(y);any=true;if(N==='AND')res=res&&b;else res=res||b;}}
+          if(!any)fail('#VALUE!');return res;}
+        case'NOT':return lift(ctx,v=>!bool(v),E(0));
+        case'ISNUMBER':{let v;try{v=E(0);}catch(e){if(e instanceof XErr)return false;throw e;}
+          return lift(ctx,x=>typeof x==='number',v);}
+        case'NA':return{err:'#N/A'};
+        case'PI':return Math.PI;
+        case'N':{const v=first(E(0));return typeof v==='number'?v:typeof v==='boolean'?(v?1:0):0;}
+        case'ABS':return lift(ctx,v=>Math.abs(num(v)),E(0));
+        case'INT':return lift(ctx,v=>Math.floor(num(v)),E(0));
+        case'SQRT':return lift(ctx,v=>{const x=num(v);if(x<0)fail('#NUM!');return Math.sqrt(x);},E(0));
+        case'ROUND':return lift(ctx,(v,d)=>roundHalf(num(v),num(d)),E(0),E(1));
+        case'LEN':return str(first(E(0))).length;
+        case'TRIM':return str(first(E(0))).trim().replace(/\s+/g,' ');
+        case'TEXT':return lift(ctx,(v,f)=>{const code=str(f);v=chk(v);if(typeof v!=='number'){if(v==null)v=0;else if(typeof v==='string'&&v.trim()!==''&&!isNaN(+v.replace(',','.')))v=+v.replace(',','.');else return str(v);}return fmtNum(v,code);},E(0),E(1));
+        case'FIXED':{const v=num(first(E(0))),d=a.length>1?num(first(E(1))):2,nc=a.length>2?bool(first(E(2))):false;return fmtFixed(v,d,nc);}
+        case'COUNT':{let k=0;for(const x of a){const v=ev(x,Object.assign({},ctx,{arr:false}));if(isRng(v)||isArr(v))flat(v).forEach(y=>{if(typeof y==='number')k++;});else if(typeof v==='number')k++;}return k;}
+        case'COUNTA':{let k=0;for(const x of a){const v=ev(x,Object.assign({},ctx,{arr:false}));if(isRng(v)||isArr(v))flat(v).forEach(y=>{if(y!=null)k++;});else k++;}return k;}
+        case'SUM':return nums(a,ctx).reduce((s,x)=>s+x,0);
+        case'AVERAGE':{const L=nums(a,ctx);if(!L.length)fail('#DIV/0!');return L.reduce((s,x)=>s+x,0)/L.length;}
+        case'MIN':{const L=nums(a,ctx);return L.length?Math.min(...L):0;}
+        case'MAX':{const L=nums(a,ctx);return L.length?Math.max(...L):0;}
+        case'LARGE':{const L=nums([a[0]],ctx).sort((x,y)=>y-x),k=num(first(E(1)));if(k<1||k>L.length)fail('#NUM!');return L[k-1];}
+        case'COUNTIF':{const rg=rngArg(a[0],ctx),f=crit(first(ev(a[1],Object.assign({},ctx,{arr:false}))));return flat(rg).filter(x=>!isErr(x)&&f(x)).length;}
+        case'CHAR':return String.fromCharCode(num(first(E(0))));
+        case'SUBSTITUTE':{const t=str(first(E(0))),o=str(first(E(1))),nw=str(first(E(2)));if(!o)return t;
+          if(a.length>3){const k=num(first(E(3)));let i=-1,cnt=0,pos=0;while((i=t.indexOf(o,pos))>=0){cnt++;if(cnt===k)return t.slice(0,i)+nw+t.slice(i+o.length);pos=i+o.length;}return t;}
+          return t.split(o).join(nw);}
+        case'SUMIFS':{const sr=flat(rngArg(a[0],ctx));let ok=sr.map(()=>true);
+          for(let i=1;i+1<a.length;i+=2){const cr=flat(rngArg(a[i],ctx)),f=crit(first(ev(a[i+1],Object.assign({},ctx,{arr:false}))));cr.forEach((x,k)=>{if(!(!isErr(x)&&f(x)))ok[k]=false;});}
+          return sr.reduce((s,x,k)=>s+(ok[k]&&typeof x==='number'?x:0),0);}
+        case'SUMPRODUCT':{const arrs=a.map(x=>toArr(ev(x,Object.assign({},ctx,{arr:true}))));
+          const R=arrs[0].length,C=arrs[0][0].length;let s=0;
+          for(let r=0;r<R;r++)for(let c=0;c<C;c++){let p=1;for(const A of arrs){if(A.length!==R||A[0].length!==C)fail('#VALUE!');const x=A[r][c];if(isErr(x))fail(x.err);p*=(typeof x==='number'?x:typeof x==='boolean'?(x?1:0):0);}s+=p;}
+          return s;}
+        case'MATCH':{const v=first(E(0)),L=flat(ev(a[1],Object.assign({},ctx,{arr:true}))),t=a.length>2?num(first(E(2))):1;chk(v);
+          if(t===0){for(let i=0;i<L.length;i++){const x=L[i];if(x==null||isErr(x))continue;if(rank(x)===rank(v)&&cmp(x,v)===0)return i+1;}fail('#N/A');}
+          if(t>0){let best=-1;for(let i=0;i<L.length;i++){const x=L[i];if(x==null||isErr(x)||rank(x)!==rank(v))continue;if(cmp(x,v)<=0)best=i;else break;}if(best<0)fail('#N/A');return best+1;}
+          {let best=-1;for(let i=0;i<L.length;i++){const x=L[i];if(x==null||rank(x)!==rank(v))continue;if(cmp(x,v)>=0)best=i;else break;}if(best<0)fail('#N/A');return best+1;}}
+        case'INDEX':{const rg=ev(a[0],Object.assign({},ctx,{arr:true}));const A=toArr(rg);
+          let r=a.length>1&&a[1].t!=='blank'?num(first(E(1))):0,c=a.length>2&&a[2].t!=='blank'?num(first(E(2))):0;
+          if(A.length===1&&a.length===2){c=r;r=1;}else if(A[0].length===1&&a.length===2){c=1;}
+          if(r<1||c<1||r>A.length||c>A[0].length)fail('#REF!');const v=A[r-1][c-1];return v==null?0:v;}
+        case'HLOOKUP':{const v=first(E(0)),A=toArr(ev(a[1],Object.assign({},ctx,{arr:true}))),ri=num(first(E(2))),ap=a.length>3?bool(first(E(3))):true;chk(v);
+          const row=A[0];let col=-1;
+          if(!ap){for(let i=0;i<row.length;i++){if(row[i]!=null&&rank(row[i])===rank(v)&&cmp(row[i],v)===0){col=i;break;}}}
+          else{for(let i=0;i<row.length;i++){if(row[i]!=null&&rank(row[i])===rank(v)&&cmp(row[i],v)<=0)col=i;else if(row[i]!=null&&cmp(row[i],v)>0)break;}}
+          if(col<0)fail('#N/A');if(ri<1||ri>A.length)fail('#REF!');const x=A[ri-1][col];return x==null?0:x;}
+      }
+      throw new Error('hàm chưa hỗ trợ '+N);
+    }
+    return self;
+  }
+  /* ---------- hiển thị ô ---------- */
+  function cellText(wb,ev,sh,cell){
+    let v=cell.f!=null&&cell.f!==''?ev.cellVal(sh,cell.c,cell.r):cell.v;
+    if(v==null)return'';
+    if(isErr(v))return v.err;
+    if(typeof v==='boolean')return v?'TRUE':'FALSE';
+    if(typeof v==='string')return v;
+    const S=wb.styles,xf=S&&S.xfs[cell.s];const nf=xf?xf.nf:0;
+    const code=nf in BUILTIN?BUILTIN[nf]:(S&&S.numFmts[nf])||'General';
+    return fmtNum(v,code);
+  }
+  function printArea(wb,name){const S=wb.sheets[name];const k='_xlnm.Print_Area@'+S.idx;const d=wb.names[k];if(d){const r=mkRef(d,name);if(r)return r;}
+    let c2=1,r2=1;Object.values(S.cells).forEach(c=>{if(c.v!=null||c.f){c2=Math.max(c2,c.c);r2=Math.max(r2,c.r);}});S.merges.forEach(m=>{c2=Math.max(c2,m.c2);r2=Math.max(r2,m.r2);});return{rng:true,sh:name,c1:1,r1:1,c2,r2};}
+  const colW=(S,c)=>{for(const x of S.cols)if(c>=x.min&&c<=x.max)return x.hid?0:Math.round(x.w*7);return S.defW?Math.round(S.defW*7):64;};
+  const rowH=(S,r)=>{const x=S.rows[r];if(x&&x.hid)return 0;return Math.round(((x&&x.ht)||S.defH)*96/72);};
+  const bd=(b)=>{if(!b)return'';const w={thin:1,hair:1,dotted:1,dashed:1,mediumDashed:2,medium:2,thick:3,double:3,dashDot:1,slantDashDot:2}[b.s]||1;const st=/dash/i.test(b.s)?'dashed':/dotted|hair/.test(b.s)?'dotted':b.s==='double'?'double':'solid';return w+'px '+st+' '+b.c;};
+  const KNOWN_FONT=/^(Arial|Calibri|Times New Roman|Cambria|Tahoma|Verdana|Segoe UI|Courier New|Georgia)$/i;
+  const fontFam=n=>/^(Times New Roman|Cambria|Georgia)$/i.test(n||'')?'"'+n+'","Liberation Serif","Times New Roman",serif':KNOWN_FONT.test(n||'')?'"'+n+'","Liberation Sans",Arial,sans-serif':'"Times New Roman","Liberation Serif",serif';
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  /* ---------- biểu đồ → SVG ---------- */
+  const lnm=n=>n.replace(/^[a-z]+:/,'');
+  const A=(el,n)=>el?Array.from(el.getElementsByTagName('*')).filter(e=>e.localName===lnm(n)):[];
+  const A1=(el,n)=>A(el,n)[0];
+  const szOf=(el,def)=>{const e=el&&A1(el,'a:defRPr');const v=e&&e.getAttribute('sz');return(v?+v:def)/100*1.333;};
+  const attr=(el,n,a)=>{const e=el&&A1(el,n);return e?e.getAttribute(a||'val'):null;};
+  function lineOf(sp){const ln=sp&&A1(sp,'a:ln');if(!ln)return{none:false,color:null,w:1.5,dash:''};
+    if(A1(ln,'a:noFill'))return{none:true};const c=A1(ln,'a:srgbClr');const w=ln.getAttribute('w')?+ln.getAttribute('w')/12700*1.333:1.5;const pd=attr(ln,'a:prstDash');
+    return{none:false,color:c?'#'+c.getAttribute('val'):null,w,dash:pd&&pd!=='solid'?(/sys/.test(pd)?'2,2':'6,3'):''};}
+  function niceStep(span,target){const raw=span/Math.max(1,target),p=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/p;return(f<1.5?1:f<3.5?2:f<7.5?5:10)*p;}
+  function polyFit(xs,ys,deg){const n=deg+1,M=Array.from({length:n},()=>new Array(n+1).fill(0));
+    const mx=xs.reduce((s,x)=>s+x,0)/xs.length;const X=xs.map(x=>x-mx);
+    for(let i=0;i<n;i++){for(let j=0;j<n;j++)M[i][j]=X.reduce((s,x)=>s+Math.pow(x,i+j),0);M[i][n]=X.reduce((s,x,k)=>s+Math.pow(x,i)*ys[k],0);}
+    for(let i=0;i<n;i++){let p=i;for(let r=i+1;r<n;r++)if(Math.abs(M[r][i])>Math.abs(M[p][i]))p=r;[M[i],M[p]]=[M[p],M[i]];if(Math.abs(M[i][i])<1e-14)return null;
+      for(let r=i+1;r<n;r++){const f=M[r][i]/M[i][i];for(let c=i;c<=n;c++)M[r][c]-=f*M[i][c];}}
+    const co=new Array(n);for(let i=n-1;i>=0;i--){let s=M[i][n];for(let j=i+1;j<n;j++)s-=M[i][j]*co[j];co[i]=s/M[i][i];}
+    return x=>co.reduce((s,c,i)=>s+c*Math.pow(x-mx,i),0);}
+  function chartSvg(wb,ev,xml,W,H,sh){
+    const doc=new DOMParser().parseFromString(xml,'application/xml');
+    const getRich=el=>el?A(el,'a:t').map(t=>t.textContent).join(''):'';
+    const title=A1(doc,'c:chart')&&A1(A1(doc,'c:chart'),'c:title')&&A1(A1(doc,'c:chart'),'c:title').parentNode===A1(doc,'c:chart')?getRich(A1(A1(doc,'c:chart'),'c:title')):'';
+    const sc=A1(doc,'c:scatterChart');if(!sc)return'';
+    const axIds=A(sc,'c:axId').map(e=>e.getAttribute('val'));
+    const axes={};A(doc,'c:valAx').forEach(ax=>{axes[attr(ax,'c:axId')]=ax;});
+    const AX=axes[axIds[0]],AY=axes[axIds[1]];
+    const rv=(f)=>{const r=mkRef(f,sh);if(!r)return[];return flat1(r);};
+    const flat1=r=>{const o=[];for(let rr=r.r1;rr<=r.r2;rr++)for(let c=r.c1;c<=r.c2;c++)o.push(ev.cellVal(r.sh,c,rr));return o;};
+    const sers=A(sc,'c:ser').map(s=>{
+      const tx=A1(s,'c:tx');let name='';if(tx){const f=A1(tx,'c:f');if(f){const r=mkRef(f.textContent,sh);const v=r?ev.cellVal(r.sh,r.c1,r.r1):'';name=v==null?'':isErr(v)?'':String(typeof v==='number'?numStr(v):v);}else{const v=A1(tx,'c:v');name=v?v.textContent:'';}}
+      const xf=A1(A1(s,'c:xVal'),'c:f'),yf=A1(A1(s,'c:yVal'),'c:f');
+      const X=xf?rv(xf.textContent):[],Y=yf?rv(yf.textContent):[];
+      const pts=X.map((x,i)=>({x:typeof x==='number'?x:NaN,y:typeof Y[i]==='number'?Y[i]:NaN}));
+      const sp=Array.from(s.children).find(e=>e.localName==='spPr');const ln=lineOf(sp);
+      const mk=A1(s,'c:marker');const sym=mk?attr(mk,'c:symbol'):'none';const msz=mk&&attr(mk,'c:size')?+attr(mk,'c:size')*1.333:6;
+      const mfill=mk&&A1(mk,'c:spPr')&&A1(A1(mk,'c:spPr'),'a:solidFill')&&A1(A1(A1(mk,'c:spPr'),'a:solidFill'),'a:srgbClr');
+      const mline=mk&&A1(mk,'c:spPr')&&lineOf(A1(mk,'c:spPr'));
+      const col=ln.color||(mfill?'#'+mfill.getAttribute('val'):'#1f4e79');
+      const dl=A1(s,'c:dLbls'),showVal=dl&&attr(dl,'c:showVal')==='1';
+      const tl=A1(s,'c:trendline');
+      return{name,pts,ln,col,sym,msz,mcol:mfill?'#'+mfill.getAttribute('val'):col,mlc:mline&&mline.color||col,showVal,dlFmt:dl&&attr(dl,'c:numFmt','formatCode'),dlSz:dl?szOf(dl,600):8,tl:tl?{type:attr(tl,'c:trendlineType'),order:+attr(tl,'c:order')||2,ln:lineOf(A1(tl,'c:spPr'))}:null};});
+    const all=[].concat(...sers.map(s=>s.pts.filter(p=>isFinite(p.x)&&isFinite(p.y))));
+    const axInfo=(ax,key)=>{const sc2=A1(ax,'c:scaling');let mn=attr(sc2,'c:min'),mxx=attr(sc2,'c:max');const ori=attr(sc2,'c:orientation')||'minMax';
+      let lo=mn!=null?+mn:null,hi=mxx!=null?+mxx:null;const vals=all.map(p=>p[key]);
+      if(lo==null||hi==null){let a=vals.length?Math.min(...vals):0,b=vals.length?Math.max(...vals):1;if(a===b){a-=1;b+=1;}const st=niceStep(b-a,6);if(lo==null)lo=Math.floor(a/st)*st;if(hi==null)hi=Math.ceil(b/st)*st;}
+      let mu=attr(ax,'c:majorUnit');const step=mu?+mu:niceStep(hi-lo,6);
+      const fmt=attr(ax,'c:numFmt','formatCode')||'General';
+      const cr=A1(ax,'c:crosses'),cra=A1(ax,'c:crossesAt');
+      return{lo,hi,rev:ori==='maxMin',step,fmt,grid:!!A1(ax,'c:majorGridlines'),title:getRich(A1(ax,'c:title')),del:attr(ax,'c:delete')==='1',crosses:cra?{at:+cra.getAttribute('val')}:{k:cr?cr.getAttribute('val'):'autoZero'},lbl:attr(ax,'c:tickLblPos')||'nextTo',sz:szOf(A1(ax,'c:txPr'),1000),tsz:szOf(A1(ax,'c:title'),1000)};};
+    const X=axInfo(AX,'x'),Y=axInfo(AY,'y');
+    const crossVal=(a,other)=>a.crosses.at!=null?a.crosses.at:a.crosses.k==='max'?other.hi:a.crosses.k==='min'?other.lo:(other.lo<=0&&other.hi>=0?0:other.lo);
+    const xAxisY=crossVal(X,Y),yAxisX=crossVal(Y,X);
+    const hasLegend=!!A1(doc,'c:legend');
+    const tFont=title?13:0;
+    const fracY=(xAxisY-Y.lo)/(Y.hi-Y.lo),xTop=Y.rev?fracY<0.5:fracY>0.5;
+    const fracX=(yAxisX-X.lo)/(X.hi-X.lo),yRight=X.rev?fracX<0.5:fracX>0.5;
+    const L=8+(Y.title?Y.tsz+4:0)+(yRight?0:Y.sz*3.2),R=14+(yRight?Y.sz*3.2:0);
+    const T=(title?tFont+14:6)+(xTop?X.sz+(X.title?X.tsz+6:0)+6:0),B=(xTop?6:X.sz+8+(X.title?X.tsz+6:0))+(hasLegend?20:4);
+    const pw=W-L-R,ph=H-T-B;
+    const fx=v=>L+(X.rev?(X.hi-v):(v-X.lo))/(X.hi-X.lo)*pw,fy=v=>T+(Y.rev?(v-Y.lo):(Y.hi-v))/(Y.hi-Y.lo)*ph;
+    const nfmt=(v,f)=>{const code=f==='General'?'General':f;return fmtNum(v,code);};
+    let o='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" font-family="Arial,Helvetica,sans-serif" style="display:block;background:#fff">';
+    o+='<rect x="0.5" y="0.5" width="'+(W-1)+'" height="'+(H-1)+'" fill="#fff" stroke="#808080" stroke-width="0.8"/>';
+    if(title)o+='<text x="'+W/2+'" y="'+(tFont+2)+'" text-anchor="middle" font-size="'+tFont+'" font-weight="bold">'+esc(title)+'</text>';
+    const ticks=(a)=>{const o2=[];const n=Math.round((a.hi-a.lo)/a.step);for(let i=0;i<=n+1;i++){const v=a.lo+i*a.step;if(v>a.hi+a.step*1e-6)break;o2.push(+v.toPrecision(12));}return o2;};
+    if(Y.grid)ticks(Y).forEach(v=>{o+='<line x1="'+L+'" x2="'+(L+pw)+'" y1="'+fy(v)+'" y2="'+fy(v)+'" stroke="#d9d9d9" stroke-width="0.7"/>';});
+    if(X.grid)ticks(X).forEach(v=>{o+='<line y1="'+T+'" y2="'+(T+ph)+'" x1="'+fx(v)+'" x2="'+fx(v)+'" stroke="#d9d9d9" stroke-width="0.7"/>';});
+    o+='<rect x="'+L+'" y="'+T+'" width="'+pw+'" height="'+ph+'" fill="none" stroke="#bfbfbf" stroke-width="0.6"/>';
+    /* trục */
+    const ay=fy(xAxisY),ax2=fx(yAxisX);
+    if(!X.del){o+='<line x1="'+L+'" x2="'+(L+pw)+'" y1="'+ay+'" y2="'+ay+'" stroke="#000" stroke-width="0.9"/>';
+      ticks(X).forEach(v=>{const x=fx(v);o+='<line x1="'+x+'" x2="'+x+'" y1="'+ay+'" y2="'+(ay+(xTop?-4:4))+'" stroke="#000" stroke-width="0.7"/>';
+        if(X.lbl!=='none')o+='<text x="'+x+'" y="'+(xTop?ay-6:ay+X.sz+5)+'" text-anchor="middle" font-size="'+X.sz+'">'+esc(nfmt(v,X.fmt))+'</text>';});
+      if(X.title)o+='<text x="'+(L+pw/2)+'" y="'+(xTop?T-X.sz-8:T+ph+X.sz+X.tsz+10)+'" text-anchor="middle" font-size="'+X.tsz+'">'+esc(X.title)+'</text>';}
+    if(!Y.del){o+='<line y1="'+T+'" y2="'+(T+ph)+'" x1="'+ax2+'" x2="'+ax2+'" stroke="#000" stroke-width="0.9"/>';
+      ticks(Y).forEach(v=>{const y=fy(v);o+='<line y1="'+y+'" y2="'+y+'" x1="'+ax2+'" x2="'+(ax2+(yRight?4:-4))+'" stroke="#000" stroke-width="0.7"/>';
+        if(Y.lbl!=='none')o+='<text x="'+(yRight?ax2+7:ax2-6)+'" y="'+(y+Y.sz*0.35)+'" text-anchor="'+(yRight?'start':'end')+'" font-size="'+Y.sz+'">'+esc(nfmt(v,Y.fmt))+'</text>';});
+      if(Y.title)o+='<text transform="translate('+(Y.tsz+2)+' '+(T+ph/2)+') rotate(-90)" text-anchor="middle" font-size="'+Y.tsz+'">'+esc(Y.title)+'</text>';}
+    o+='<clipPath id="pc"><rect x="'+(L-3)+'" y="'+(T-3)+'" width="'+(pw+6)+'" height="'+(ph+6)+'"/></clipPath><g clip-path="url(#pc)">';
+    const marker=(s,x,y)=>{x=+x;y=+y;const r=s.msz/2;
+      switch(s.sym){case'circle':return'<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+s.mcol+'" stroke="'+s.mlc+'" stroke-width="0.6"/>';
+        case'square':return'<rect x="'+(x-r)+'" y="'+(y-r)+'" width="'+2*r+'" height="'+2*r+'" fill="'+s.mcol+'" stroke="'+s.mlc+'" stroke-width="0.6"/>';
+        case'triangle':return'<polygon points="'+x+','+(y-r)+' '+(x+r)+','+(y+r)+' '+(x-r)+','+(y+r)+'" fill="'+s.mcol+'" stroke="'+s.mlc+'" stroke-width="0.6"/>';
+        case'diamond':return'<polygon points="'+x+','+(y-r)+' '+(x+r)+','+y+' '+x+','+(y+r)+' '+(x-r)+','+y+'" fill="'+s.mcol+'" stroke="'+s.mlc+'" stroke-width="0.6"/>';
+        case'x':return'<path d="M'+(x-r)+','+(y-r)+'L'+(x+r)+','+(y+r)+'M'+(x+r)+','+(y-r)+'L'+(x-r)+','+(y+r)+'" stroke="'+s.mlc+'" stroke-width="1.2"/>';
+        case'plus':return'<path d="M'+(x-r)+','+y+'L'+(x+r)+','+y+'M'+x+','+(y-r)+'L'+x+','+(y+r)+'" stroke="'+s.mlc+'" stroke-width="1.2"/>';
+        case'dash':return'<line x1="'+(x-r)+'" x2="'+(x+r)+'" y1="'+y+'" y2="'+y+'" stroke="'+s.mlc+'" stroke-width="2"/>';
+        default:return'';}};
+    sers.forEach(s=>{
+      if(!s.ln.none){let d='',pen=false;s.pts.forEach(p=>{if(!isFinite(p.x)||!isFinite(p.y)){pen=false;return;}d+=(pen?'L':'M')+fx(p.x).toFixed(1)+','+fy(p.y).toFixed(1);pen=true;});
+        if(d)o+='<path d="'+d+'" fill="none" stroke="'+s.col+'" stroke-width="'+s.ln.w+'"'+(s.ln.dash?' stroke-dasharray="'+s.ln.dash+'"':'')+'/>';}
+      if(s.tl){const v=s.pts.filter(p=>isFinite(p.x)&&isFinite(p.y));
+        if(v.length>=s.tl.order+1||(s.tl.type==='linear'&&v.length>=2)){const f=polyFit(v.map(p=>p.x),v.map(p=>p.y),s.tl.type==='linear'?1:s.tl.order);
+          if(f){const x0=Math.min(...v.map(p=>p.x)),x1=Math.max(...v.map(p=>p.x));let d='';for(let i=0;i<=80;i++){const x=x0+(x1-x0)*i/80;d+=(i?'L':'M')+fx(x).toFixed(1)+','+fy(f(x)).toFixed(1);}
+            o+='<path d="'+d+'" fill="none" stroke="'+(s.tl.ln.color||'#000')+'" stroke-width="'+(s.tl.ln.w||1.3)+'"/>';}}}
+      s.pts.forEach(p=>{if(!isFinite(p.x)||!isFinite(p.y))return;o+=marker(s,fx(p.x).toFixed(1),fy(p.y).toFixed(1));
+        if(s.showVal)o+='<text x="'+(fx(p.x)+s.msz/2+2)+'" y="'+(fy(p.y)+3)+'" font-size="'+Math.max(7,s.dlSz)+'">'+esc(fmtNum(p.y,s.dlFmt||'General'))+'</text>';});
+    });
+    o+='</g>';
+    if(hasLegend){const items=sers.filter(s=>s.name);const wTxt=items.map(s=>s.name.length*4.6+30);const tot=wTxt.reduce((a,b)=>a+b,0);let x=Math.max(4,(W-tot)/2);const y=H-9;
+      items.forEach((s,i)=>{o+='<line x1="'+x+'" x2="'+(x+16)+'" y1="'+(y-3)+'" y2="'+(y-3)+'" stroke="'+s.col+'" stroke-width="'+(s.ln.none?0:s.ln.w)+'"'+(s.ln.dash?' stroke-dasharray="'+s.ln.dash+'"':'')+'/>'+marker(s,x+8,y-3)+'<text x="'+(x+20)+'" y="'+y+'" font-size="9">'+esc(s.name)+'</text>';x+=wTxt[i];});}
+    return o+'</svg>';
+  }
+  /* ---------- vẽ sheet → HTML ---------- */
+  async function anchors(wb,S,px){
+    const out=[];if(!S.drawing)return out;
+    const f=wb.zip.file(S.drawing);if(!f)return out;
+    const doc=new DOMParser().parseFromString(await f.async('string'),'application/xml');
+    const rp=S.drawing.replace(/drawings\/([^\/]+)$/,'drawings/_rels/$1.rels'),rf=wb.zip.file(rp),rel={};
+    if(rf){const rd=new DOMParser().parseFromString(await rf.async('string'),'application/xml');for(const r of rd.getElementsByTagName('Relationship'))rel[r.getAttribute('Id')]=resolvePath(S.drawing,r.getAttribute('Target'));}
+    const ln=el=>el.localName||el.nodeName.replace(/^.*:/,'');
+    const kid=(el,n)=>Array.from(el.children).find(c=>ln(c)===n);
+    for(const an of Array.from(doc.documentElement.children)){
+      const k=ln(an);if(!/Anchor$/.test(k))continue;
+      const pos=(e)=>{const g=n=>{const x=kid(e,n);return x?+x.textContent:0;};return{c:g('col'),co:g('colOff'),r:g('row'),ro:g('rowOff')};};
+      let x,y,w,h,fr=null,to=null;
+      if(k==='absoluteAnchor'){const p=kid(an,'pos'),e=kid(an,'ext');x=+p.getAttribute('x')/9525;y=+p.getAttribute('y')/9525;w=+e.getAttribute('cx')/9525;h=+e.getAttribute('cy')/9525;}
+      else{fr=pos(kid(an,'from'));x=px.cx(fr.c)+fr.co/9525;y=px.ry(fr.r)+fr.ro/9525;
+        if(k==='twoCellAnchor'){to=pos(kid(an,'to'));w=px.cx(to.c)+to.co/9525-x;h=px.ry(to.r)+to.ro/9525-y;}
+        else{const e=kid(an,'ext');w=+e.getAttribute('cx')/9525;h=+e.getAttribute('cy')/9525;}}
+      const pic=kid(an,'pic'),gf=kid(an,'graphicFrame');
+      if(pic){const bl=A1(pic,'a:blip');const rid=bl&&(bl.getAttribute('r:embed')||bl.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','embed'));
+        if(rid&&rel[rid]&&w>6&&h>6){const mf=wb.zip.file(rel[rid]);if(mf){const b64=await mf.async('base64');out.push({t:'img',x,y,w,h,fr,to,src:'data:image/'+(/\.jpe?g$/i.test(rel[rid])?'jpeg':'png')+';base64,'+b64});}}}
+      else if(gf){const ch=A1(gf,'c:chart');const rid=ch&&(ch.getAttribute('r:id')||ch.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id'));
+        if(rid&&rel[rid]){const cf=wb.zip.file(rel[rid]);if(cf)out.push({t:'chart',x,y,w,h,fr,to,xml:await cf.async('string')});}}
+    }
+    return out;
+  }
+  async function render(wb,name,opt){
+    opt=opt||{};const S=wb.sheets[name];if(!S)throw new Error('thiếu sheet '+name);
+    const ev=Evaluator(wb),pa=printArea(wb,name);
+    const cols=[],rows=[];for(let c=pa.c1;c<=pa.c2;c++)cols.push({c,w:colW(S,c)});for(let r=pa.r1;r<=pa.r2;r++)rows.push({r,h:rowH(S,r)});
+    const cs={},rs={};let acc=0;cols.forEach(x=>{cs[x.c]=acc;acc+=x.w;});cs[pa.c2+1]=acc;const totW=acc;acc=0;rows.forEach(x=>{rs[x.r]=acc;acc+=x.h;});rs[pa.r2+1]=acc;const totH=acc;
+    const px={cx:i0=>{const c=i0+1;return c<pa.c1?0:c>pa.c2+1?totW:cs[c];},ry:i0=>{const r=i0+1;return r<pa.r1?0:r>pa.r2+1?totH:rs[r];}};
+    const merge={},cover=new Set();
+    S.merges.forEach(m=>{if(m.c2<pa.c1||m.c1>pa.c2||m.r2<pa.r1||m.r1>pa.r2)return;merge[colL(m.c1)+m.r1]=m;for(let r=m.r1;r<=m.r2;r++)for(let c=m.c1;c<=m.c2;c++)if(r!==m.r1||c!==m.c1)cover.add(colL(c)+r);});
+    const ST=wb.styles||{xfs:[],fonts:[],fills:[],borders:[],numFmts:{}};
+    const tbl=document.createElement('table');tbl.className='pkv-t';tbl.style.cssText='border-collapse:collapse;table-layout:fixed;width:'+totW+'px;background:#fff;color:#000';
+    const cg=document.createElement('colgroup');cols.forEach(x=>{if(!x.w)return;const e=document.createElement('col');e.style.width=x.w+'px';cg.append(e);});tbl.append(cg);
+    const texts=[],trOf={};
+    for(const R of rows){if(!R.h)continue;
+      const tr=document.createElement('tr');tr.style.height=R.h+'px';trOf[R.r]=tr;
+      for(const C of cols){if(!C.w)continue;const key=colL(C.c)+R.r;if(cover.has(key))continue;
+        const cell=S.cells[key]||{c:C.c,r:R.r,v:null,f:null,s:0};const m=merge[key];
+        let cspan=1,rspan=1;if(m){cspan=0;for(let c=m.c1;c<=Math.min(m.c2,pa.c2);c++)if(colW(S,c))cspan++;rspan=0;for(let r=m.r1;r<=Math.min(m.r2,pa.r2);r++)if(rowH(S,r))rspan++;}
+        const xf=ST.xfs[cell.s]||{nf:0,font:0,fill:0,border:0,h:'',v:'',wrap:false,ind:0};
+        const font=ST.fonts[xf.font]||{sz:11,name:'Calibri'};
+        let txt='';try{txt=cellText(wb,ev,name,cell);}catch(e){txt='#VALUE!';}
+        if(txt!=='')texts.push([key,txt,(cell.f!=null&&cell.f!==''?ev.cellVal(name,cell.c,cell.r):cell.v)]);
+        const td=document.createElement('td');if(cspan>1)td.colSpan=cspan;if(rspan>1)td.rowSpan=rspan;
+        /* viền: ô gộp lấy theo các ô ở mép */
+        const edge=(c,r)=>{const e=S.cells[colL(c)+r];return(ST.borders[(ST.xfs[e?e.s:0]||{}).border]||{});};
+        const b0=ST.borders[xf.border]||{};
+        const bl=m?edge(m.c1,m.r1).left:b0.left,br=m?edge(m.c2,m.r1).right:b0.right,bt=m?edge(m.c1,m.r1).top:b0.top,bb=m?edge(m.c1,m.r2).bottom:b0.bottom;
+        const num=typeof (cell.f!=null&&cell.f!==''?ev.cellVal(name,cell.c,cell.r):cell.v)==='number';
+        const hz=xf.h==='centerContinuous'?'center':xf.h==='general'||!xf.h?(num?'right':'left'):xf.h==='distributed'||xf.h==='justify'||xf.h==='fill'?'left':xf.h;
+        let css='padding:0 2px;overflow:'+(xf.wrap?'hidden':'visible')+';text-align:'+hz+';vertical-align:'+(xf.v==='center'?'middle':xf.v==='top'?'top':'bottom')+';font:'+((font.i||!KNOWN_FONT.test(font.name||''))?'italic ':'')+(font.b?'bold ':'')+(font.sz*4/3).toFixed(2)+'px/1.25 '+fontFam(font.name)+';white-space:'+(xf.wrap?'pre-wrap':'pre')+';'+(xf.wrap?'overflow-wrap:anywhere;':'')+
+          (font.color&&font.color!=='#000000'?'color:'+font.color+';':'')+(font.u?'text-decoration:underline;':'')+'background:'+(ST.fills[xf.fill]||'#fff')+';'+(xf.ind?'padding-left:'+(xf.ind*9+2)+'px;':'');
+        if(bl)css+='border-left:'+bd(bl)+';';if(br)css+='border-right:'+bd(br)+';';if(bt)css+='border-top:'+bd(bt)+';';if(bb)css+='border-bottom:'+bd(bb)+';';
+        td.style.cssText=css;td.textContent=(!KNOWN_FONT.test(font.name||'')&&api.legacy)?api.legacy(txt):txt;td.dataset.ref=key;tr.append(td);}
+      tbl.append(tr);}
+    const box=document.createElement('div');box.className='pkv';box.style.cssText='position:relative;width:'+totW+'px;min-height:'+totH+'px;background:#fff;margin:0 auto';
+    box.append(tbl);
+    const objs_=[];
+    if(opt.noObjects!==true){
+      const objs=await anchors(wb,S,px);objs.forEach(o=>objs_.push(o));
+      for(const ob of objs){
+        if(ob.t==='img'){const im=document.createElement('img');im.src=ob.src;im.style.cssText='position:absolute;left:'+ob.x+'px;top:'+ob.y+'px;width:'+ob.w+'px;height:'+ob.h+'px;image-rendering:pixelated';im.alt='';ob.el=im;box.append(im);}
+        else{const d=document.createElement('div');d.style.cssText='position:absolute;left:'+ob.x+'px;top:'+ob.y+'px;width:'+ob.w+'px;height:'+ob.h+'px';
+          ob.el=d;ob.drawH=null;ob.draw=hh=>{try{d.innerHTML=chartSvg(wb,ev,ob.xml,Math.round(ob.w),Math.round(hh),name);ob.drawH=hh;}catch(e){console.warn('chart',e);}};ob.draw(ob.h);box.append(d);}}}
+    let bw=totW,bh=totH;objs_.forEach(o=>{bw=Math.max(bw,Math.ceil(o.x+o.w)+1);bh=Math.max(bh,Math.ceil(o.y+o.h)+1);});box.style.width=bw+'px';box.style.minHeight=bh+'px';
+    /* dòng chữ xuống dòng làm cao hơn chuẩn: đặt lại vị trí ảnh/biểu đồ theo vị trí thật của hàng */
+    const relayout=()=>{const br=box.getBoundingClientRect();if(!br.width)return;const z=br.width/bw||1;
+      const rowTop=i0=>{let r=i0+1;if(r<pa.r1)return 0;while(r<=pa.r2&&!trOf[r])r++;return((r>pa.r2?tbl.getBoundingClientRect().bottom:trOf[r].getBoundingClientRect().top)-br.top)/z;};
+      let mb=tbl.getBoundingClientRect().height/z;
+      objs_.forEach(ob=>{if(!ob.fr||!ob.el)return;const y=rowTop(ob.fr.r)+ob.fr.ro/9525;let hh=ob.h;if(ob.to)hh=Math.max(8,rowTop(ob.to.r)+ob.to.ro/9525-y);
+        ob.el.style.top=y+'px';ob.el.style.height=hh+'px';if(ob.draw&&Math.abs((ob.drawH||0)-hh)>1)ob.draw(hh);mb=Math.max(mb,y+hh+1);});
+      box.style.minHeight=Math.max(totH,mb)+'px';};
+    return{el:box,w:bw,h:bh,relayout,texts,wb,vis:{cols:cols.filter(x=>x.w).map(x=>x.c),rows:rows.filter(x=>x.h).map(x=>x.r)}};
+  }
+  const api={load,render,Evaluator,cellText,chartSvg,fmtNum,legacy:null};
+  return api;
+})();
+
+async function pkSourceBytes(s){
+  s=await withDetail(s);const p=s.phieu;
+  if(p&&SESSION){try{return(await phieuBytes(s)).bytes;}catch(e){console.warn('pkSourceBytes',e);}}
+  const x={bc:phieuNo(s),hash:(p&&p.hash)||'',url:(p&&p.url)||'',at:(p&&p.at)||'',qr:p&&p.qr?await qrPng(p.qr):null,tp_tu_thu:tpTest(s),sx_ten:s.soat_xet&&s.soat_xet.by,thay_the:(p&&p.thay_the)||null};
+  return issuedBytes(s,phieuNo(s),x);
+}
+function pkFit(R){const wrap=h('div',{class:'pkv-wrap'},R.el);
+  const fit=()=>{const w=wrap.clientWidth;if(w>0){R.el.style.zoom=String(Math.min(1,(w-2)/R.w));try{R.relayout();}catch(e){console.warn(e);}}};
+  requestAnimationFrame(fit);if(window.ResizeObserver){try{new ResizeObserver(fit).observe(wrap);}catch(e){}}return wrap;}
+/* 0.27.6 B7b: phiếu hiển thị = chính sheet Phieu_KQ của file phiếu; lỗi thì quay về bản dựng cũ */
 function renderPhieu(s){
+  const host=h('div',{class:'pkv-host'},h('p',{class:'muted small'},'Đang dựng phiếu từ sheet Phieu_KQ...'));
+  (async()=>{try{const wb=await PKV.load(await pkSourceBytes(s)),R=await PKV.render(wb,'Phieu_KQ');
+      host.replaceChildren(...[sdNote(s),pkFit(R)].filter(Boolean));host.dataset.src='phieu_kq';}
+    catch(e){console.warn('Phieu_KQ',e);logErr('pkv',e);host.replaceChildren(renderPhieuLegacy(s));host.dataset.src='legacy';}})();
+  return host;
+}
+function renderPhieuLegacy(s){
   const r=(s.nop&&s.nop.results)||{};const m=s.mau||{},da=s.du_an||{},G=gt(s);
   const DAp=loaiOf(s)==='DA_5_20',DPx=DAp?DPDA:DP;const rows=(DAp?DA_ROWS.map(x=>({name:x[1],std:x[2],unit:x[3],key:x[0]})):TESTS.filter(t=>s.chi_tieu.includes(t.code))).map((t,i)=>{const v=r[t.key];return h('tr',null,h('td',{class:'c'},i+1),h('td',null,t.name),h('td',null,t.std),h('td',{class:'c'},t.unit),h('td',{class:'c'},v==null?'':fnum(v,DPx[t.key])));});
   const sv=(DAp||(G&&G.sieve)||s.chi_tieu.includes('CAT_05'))?((s.nop&&s.nop.sieve)||[]):[];
@@ -4546,6 +5025,9 @@ const MAU_SHEETS=['Thong_tin','So_lieu','Kiem_tra','Phieu_KQ','_HeThong'];
 /* VietwareX (UniKey VIETWARE-X): mỗi ký tự Unicode tiếng Việt đổi thành 1 hoặc 2 ký tự Windows-1252, dấu viết sau chữ cái; dùng với font VNshelleyAllegro */
 const VWX={"\u00c1":"A\u00cf","\u00e1":"a\u00ef","\u00c0":"A\u00cc","\u00e0":"a\u00ec","\u1ea2":"A\u00cd","\u1ea3":"a\u00ed","\u00c3":"A\u00ce","\u00e3":"a\u00ee","\u1ea0":"A\u00db","\u1ea1":"a\u00fb","\u00c2":"\u00c1","\u00e2":"\u00e1","\u1ea4":"\u00c1\u00da","\u1ea5":"\u00e1\u00fa","\u1ea6":"\u00c1\u00d6","\u1ea7":"\u00e1\u00f6","\u1ea8":"\u00c1\u00d8","\u1ea9":"\u00e1\u00f8","\u1eaa":"\u00c1\u00d9","\u1eab":"\u00e1\u00f9","\u1eac":"\u00c1\u00db","\u1ead":"\u00e1\u00fb","\u0102":"\u00c0","\u0103":"\u00e0","\u1eae":"\u00c0\u00d5","\u1eaf":"\u00e0\u00f5","\u1eb0":"\u00c0\u00d2","\u1eb1":"\u00e0\u00f2","\u1eb2":"\u00c0\u00d3","\u1eb3":"\u00e0\u00f3","\u1eb4":"\u00c0\u00d4","\u1eb5":"\u00e0\u00f4","\u1eb6":"\u00c0\u00db","\u1eb7":"\u00e0\u00fb","\u0110":"\u00c2","\u0111":"\u00e2","\u00c9":"E\u00cf","\u00e9":"e\u00ef","\u00c8":"E\u00cc","\u00e8":"e\u00ec","\u1eba":"E\u00cd","\u1ebb":"e\u00ed","\u1ebc":"E\u00ce","\u1ebd":"e\u00ee","\u1eb8":"E\u00db","\u1eb9":"e\u00fb","\u00ca":"\u00c3","\u00ea":"\u00e3","\u1ebe":"\u00c3\u00da","\u1ebf":"\u00e3\u00fa","\u1ec0":"\u00c3\u00d6","\u1ec1":"\u00e3\u00f6","\u1ec2":"\u00c3\u00d8","\u1ec3":"\u00e3\u00f8","\u1ec4":"\u00c3\u00d9","\u1ec5":"\u00e3\u00f9","\u1ec6":"\u00c3\u00db","\u1ec7":"\u00e3\u00fb","\u00cd":"\u00ca","\u00ed":"\u00ea","\u00cc":"\u00c7","\u00ec":"\u00e7","\u1ec8":"\u00c8","\u1ec9":"\u00e8","\u0128":"\u00c9","\u0129":"\u00e9","\u1eca":"\u00cb","\u1ecb":"\u00eb","\u00d3":"O\u00cf","\u00f3":"o\u00ef","\u00d2":"O\u00cc","\u00f2":"o\u00ec","\u1ece":"O\u00cd","\u1ecf":"o\u00ed","\u00d5":"O\u00ce","\u00f5":"o\u00ee","\u1ecc":"O\u00dc","\u1ecd":"o\u00fc","\u00d4":"\u00c4","\u00f4":"\u00e4","\u1ed0":"\u00c4\u00da","\u1ed1":"\u00e4\u00fa","\u1ed2":"\u00c4\u00d6","\u1ed3":"\u00e4\u00f6","\u1ed4":"\u00c4\u00d8","\u1ed5":"\u00e4\u00f8","\u1ed6":"\u00c4\u00d9","\u1ed7":"\u00e4\u00f9","\u1ed8":"\u00c4\u00dc","\u1ed9":"\u00e4\u00fc","\u01a0":"\u00c5","\u01a1":"\u00e5","\u1eda":"\u00c5\u00cf","\u1edb":"\u00e5\u00ef","\u1edc":"\u00c5\u00cc","\u1edd":"\u00e5\u00ec","\u1ede":"\u00c5\u00cd","\u1edf":"\u00e5\u00ed","\u1ee0":"\u00c5\u00ce","\u1ee1":"\u00e5\u00ee","\u1ee2":"\u00c5\u00dc","\u1ee3":"\u00e5\u00fc","\u00da":"U\u00cf","\u00fa":"u\u00ef","\u00d9":"U\u00cc","\u00f9":"u\u00ec","\u1ee6":"U\u00cd","\u1ee7":"u\u00ed","\u0168":"U\u00ce","\u0169":"u\u00ee","\u1ee4":"U\u00db","\u1ee5":"u\u00fb","\u01af":"\u00c6","\u01b0":"\u00e6","\u1ee8":"\u00c6\u00cf","\u1ee9":"\u00e6\u00ef","\u1eea":"\u00c6\u00cc","\u1eeb":"\u00e6\u00ec","\u1eec":"\u00c6\u00cd","\u1eed":"\u00e6\u00ed","\u1eee":"\u00c6\u00ce","\u1eef":"\u00e6\u00ee","\u1ef0":"\u00c6\u00db","\u1ef1":"\u00e6\u00fb","\u00dd":"Y\u00cf","\u00fd":"y\u00ef","\u1ef2":"Y\u00cc","\u1ef3":"y\u00ec","\u1ef6":"Y\u00cd","\u1ef7":"y\u00ed","\u1ef8":"Y\u00ce","\u1ef9":"y\u00ee","\u1ef4":"Y\u00d1","\u1ef5":"y\u00f1","\u20a1":"\u201a","\u201e":"\u201e","\u2026":"\u2026","\u2020":"\u2020","\u2021":"\u2021","\u2030":"\u2030","\u2039":"\u2039","\u2018":"\u2018","\u2019":"\u2019","\u201c":"\u201c","\u201d":"\u201d","\u2022":"\u2022","\u2013":"\u2013","\u2014":"\u2014","\u203a":"\u203a"};
 function toVwx(t){return Array.from(String(t==null?'':t).normalize('NFC')).map(c=>VWX[c]||c).join('');}
+/* đổi ngược VietwareX → Unicode để hiển thị trên màn hình (máy không có font VNshelleyAllegro) */
+const UNVWX=(()=>{const m={};Object.keys(VWX).forEach(k=>{m[VWX[k]]=k;});return m;})();
+PKV.legacy=t=>{const s=String(t==null?'':t);let o='';for(let i=0;i<s.length;){const two=s.substr(i,2),one=s[i];if(two.length===2&&UNVWX[two]){o+=UNVWX[two];i+=2;}else if(UNVWX[one]){o+=UNVWX[one];i++;}else{o+=one;i++;}}return o;};
 const MAU_DEF={tp_uni:'Hoàng Công Lý',tp_vw:'',gd_uni:'Lưu Minh Tuấn',gd_vw:'',w:[1.5,1.5,2.25],c:['#FF00FF','#0000FF','#000080']};
 const MAU_MARGIN=[['left',1.7,'trái'],['right',0.5,'phải'],['top',4.1,'trên'],['bottom',2.2,'dưới']];
 function mauOpts(){return Object.assign({},MAU_DEF,(S.mau&&S.mau.opts)||{});}
@@ -5908,7 +6390,7 @@ pages['tra-cuu']={public:true,live:true,render(root){
     arLookup(slug).then(e=>{if(e)box.replaceChildren(...arcPublicCard(e));else msg.textContent=nf;});
     return;}
   const st=h('span',{class:'pill'},'Đang kiểm tra'),ph=h('div',null,h('p',{class:'muted'},'Đang tải phiếu...'));
-  box.append(h('h2',null,'Số báo cáo '+phieuNo(s)),h('div',null,st),sdLookupBanner(s,slug),kv([['Mã mẫu',s.ma_mau],['Khách hàng',s.khach.ten],['Công trình',s.du_an.cong_trinh],['Ngày phát hành',fdt(s.phieu.at)],['SHA-256',s.phieu.hash]]),ph);
+  box.append(h('h2',null,'Số báo cáo '+phieuNo(s)),h('div',null,st),sdLookupBanner(s,slug)||'',kv([['Mã mẫu',s.ma_mau],['Khách hàng',s.khach.ten],['Công trình',s.du_an.cong_trinh],['Ngày phát hành',fdt(s.phieu.at)],['SHA-256',s.phieu.hash]]),ph);
   withDetail(s).then(s2=>{
     sha256(new TextEncoder().encode(s2.phieu.snap||'')).then(x=>{const ok=!!x&&x===s2.phieu.hash;st.dataset.tone=ok?'ok':'bad';st.textContent=ok?'Nguyên vẹn: mã băm khớp bản lưu':'KHÔNG KHỚP bản lưu';});
     ph.replaceChildren(renderPhieu(s2));
@@ -6808,7 +7290,7 @@ async function boot(){
   Data.watch('config',list=>{const tb=list.find(x=>x.id==='tb_cat');S.tbcat=tb&&tb.map?tb.map:null;S.tbcat_meta=tb||null;S.mau=list.find(x=>x.id==='mau_kq')||null;S.mauf={};list.forEach(x=>{if(/^mauf_/.test(x.id))S.mauf[x.id.slice(5)]=x;});S.perCfg=list.find(x=>x.id==='periods')||null;S.saoLuu=list.find(x=>x.id==='sao_luu')||null;S.cfgLoaded=true;{const bg=list.find(x=>x.id==='bang_gia')||{};S.bgia=bg.gia||{};S.bgiaCt=bg.ct||{};S.bgiaThem=Array.isArray(bg.them)?bg.them:[];}{const bk=list.find(x=>x.id==='bank');S.bankCfg=bk?{stk:bk.stk,bin:bk.bin,bank:bk.bank,ten:bk.ten||''}:null;}syncSampleWatchers();ensurePeriodOpen();const cfg=list.find(x=>x.id==='main');if(cfg)S.config=Object.assign({policy:'canh_bao',han_tra_ngay:5,solo:true,ng_sc:null,ng_rx:null,ng_hh:null},cfg);schedule();});
   render();
 }
-window.__ptn={GT,envNeed,bcFileName,buildTemplate,readXlsx,nmPrintBox,nmPackFromSample,dvPrintBox,dvTotals,dvPay,dvSave,dvAct,dvNumber,dvBook,dvLineFrom,dvAllBk,dvAllBg,dvImportLines,dvReadXlsx,dvTemplateXlsx,dvPriceXlsx,dvMine,dvDebtData,DV,DVS,dvShow,dvOpen,tbNotify,tbSync,tbAlert,tbEnable,tbRead,tbReadAll,tbUnread,tbOS,TB,sdCreate,sdApprove,sdMove,sdOldBytes,sdNewDlg,sdOpen,sdDateErr,sdList,sdPrintBox,sdNo,phieuNo,recompute,recomputeDA,bkupRun,bkupCollect,xlBook,mauApply,mauDiff,validateTemplate,origB64,activeB64,mauOv,mauCodes,mauBytes,S,bkPrint,vietQrText,emvCrc,bkPay,bkAct,bkStLabel,bkNormDoc,bkQrText,bkQrNd,bkBank,bkPendingPays,bkSumRows,bkTblXlsx,bkQr,bkPayDlg,BK_UNIT,bkQty,bkPriceFor,bkPriceCatalog,bkParsePrices,bkPricesXlsx,bkLines,bkTotals,docSo,bkXlsx,bkDraftFrom,bkSave,ycGroups,BK,BKS,bkAll,bkDelta,bkPendingGroups,bkTam,toVwx,VWX,applyMau,cvRc,CV_T,MAT_OPT,macOf,cpFill,cpCands,cpVals,cvLinkChecks,nenRc,kRc,rcCT,kpCp,kVerify,rpt,monthlyYc,YC_MONTH,ycKey,NGUON_LBL,arcBuild,arcRead,arcCommit,arLookup,arcPeriods,arcDueCount,perDue,perEnd,AR,arOpenZip,setArTab:v=>{arTab=v;},rcCS,skNew,skDraw,skOp,skPng,skFromFile,skEmbed,skMedia,skOpen,skNorm,nguonLbl,rcCP,cpVals,cpCands,cpFill,cpBody,CP_T,CP_K,loaiOf,QT_TYPES,rcTX,rcGach,rcDG,rcLN,renderPhieu,rawTable,recheck,qrText,GT,gt,rcXM,rcTH,issuedBytes,issuedParts,analyzeUploadGT,MF_PH,MF_PH_DA,submitUpload,loaiForm,defTests,TESTS,UP,buildTemplate,readXlsx,analyzeUpload,S,Data,ACCOUNTS,makeCode,PARTS,DET,sp,dp,bp,isNew,newSid,perOf,withDetail,loadDetailsFor,audit,recentActs,rebuildSamples,openPeriods,syncSampleWatchers,issueDoc,downloadPhieu,phieuBytes,setSession:id=>{SESSION=ACCOUNTS.find(a=>a.id===id)||null;saveSession();setWroom(null);},setWroom,wroom,dvEquip,dvTbImport,dvCcImport,get SESSION(){return SESSION;},get db(){return !!DB;}};
+window.__ptn={PKV,renderPhieuLegacy,pkSourceBytes,GT,envNeed,bcFileName,buildTemplate,readXlsx,nmPrintBox,nmPackFromSample,dvPrintBox,dvTotals,dvPay,dvSave,dvAct,dvNumber,dvBook,dvLineFrom,dvAllBk,dvAllBg,dvImportLines,dvReadXlsx,dvTemplateXlsx,dvPriceXlsx,dvMine,dvDebtData,DV,DVS,dvShow,dvOpen,tbNotify,tbSync,tbAlert,tbEnable,tbRead,tbReadAll,tbUnread,tbOS,TB,sdCreate,sdApprove,sdMove,sdOldBytes,sdNewDlg,sdOpen,sdDateErr,sdList,sdPrintBox,sdNo,phieuNo,recompute,recomputeDA,bkupRun,bkupCollect,xlBook,mauApply,mauDiff,validateTemplate,origB64,activeB64,mauOv,mauCodes,mauBytes,S,bkPrint,vietQrText,emvCrc,bkPay,bkAct,bkStLabel,bkNormDoc,bkQrText,bkQrNd,bkBank,bkPendingPays,bkSumRows,bkTblXlsx,bkQr,bkPayDlg,BK_UNIT,bkQty,bkPriceFor,bkPriceCatalog,bkParsePrices,bkPricesXlsx,bkLines,bkTotals,docSo,bkXlsx,bkDraftFrom,bkSave,ycGroups,BK,BKS,bkAll,bkDelta,bkPendingGroups,bkTam,toVwx,VWX,applyMau,cvRc,CV_T,MAT_OPT,macOf,cpFill,cpCands,cpVals,cvLinkChecks,nenRc,kRc,rcCT,kpCp,kVerify,rpt,monthlyYc,YC_MONTH,ycKey,NGUON_LBL,arcBuild,arcRead,arcCommit,arLookup,arcPeriods,arcDueCount,perDue,perEnd,AR,arOpenZip,setArTab:v=>{arTab=v;},rcCS,skNew,skDraw,skOp,skPng,skFromFile,skEmbed,skMedia,skOpen,skNorm,nguonLbl,rcCP,cpVals,cpCands,cpFill,cpBody,CP_T,CP_K,loaiOf,QT_TYPES,rcTX,rcGach,rcDG,rcLN,renderPhieu,rawTable,recheck,qrText,GT,gt,rcXM,rcTH,issuedBytes,issuedParts,analyzeUploadGT,MF_PH,MF_PH_DA,submitUpload,loaiForm,defTests,TESTS,UP,buildTemplate,readXlsx,analyzeUpload,S,Data,ACCOUNTS,makeCode,PARTS,DET,sp,dp,bp,isNew,newSid,perOf,withDetail,loadDetailsFor,audit,recentActs,rebuildSamples,openPeriods,syncSampleWatchers,issueDoc,downloadPhieu,phieuBytes,setSession:id=>{SESSION=ACCOUNTS.find(a=>a.id===id)||null;saveSession();setWroom(null);},setWroom,wroom,dvEquip,dvTbImport,dvCcImport,get SESSION(){return SESSION;},get db(){return !!DB;}};
 boot();
 })();
 </script>
