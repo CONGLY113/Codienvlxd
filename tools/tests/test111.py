@@ -40,7 +40,7 @@ async def main():
         side=await L('.side').inner_text()
         chk('Phòng Hóa sinh môi trường' in side and 'Trưởng phòng' not in side and 'Giang Tấn Thông' in side,'thanh bên: tên phòng, chỉ tên người: %s'%side.replace('\n',' | ')[:160])
         nav=await ev("()=>[...document.querySelectorAll('.nav a')].map(a=>a.firstChild.textContent)")
-        chk(nav==['Tổng quan','Thông báo','Hồ sơ lưu trữ','Bảng kê và báo giá','Thiết bị'],'menu %s'%nav)
+        chk(nav==['Tổng quan','Thông báo','Hồ sơ lưu trữ','Thanh toán và báo giá','Thiết bị'],'menu %s'%nav)
         # --- thiết bị riêng, không lẫn phòng VLXD
         await ev("()=>{location.hash='thiet-bi'}");await page.wait_for_timeout(500)
         chk(await L('table tbody tr').count()==0,'hóa sinh chưa có thiết bị (không lấy của VLXD)')
@@ -76,11 +76,11 @@ async def main():
         await ev("()=>{window.__ptn.setSession('NS009');location.hash='thiet-bi'}");await page.wait_for_timeout(500)
         chk(await L('table tbody tr').count()>20,'phòng Cơ điện vẫn có danh mục thiết bị cũ')
         nav=await ev("()=>[...document.querySelectorAll('.nav a')].map(a=>a.firstChild.textContent)")
-        chk('Nhận mẫu' in nav and 'Thanh toán' in nav,'phòng Cơ điện đủ menu cũ %s'%nav)
+        chk('Nhận mẫu' in nav and 'Thanh toán và báo giá' in nav and 'Bảng kê và báo giá' not in nav,'phòng Cơ điện đủ menu cũ %s'%nav)
         # thủ quỹ vào phòng kiểm định: không có menu nhận mẫu
         await ev("()=>{window.__ptn.setSession('NS012');window.__ptn.setWroom('kd');location.hash='tong-quan'}");await page.wait_for_timeout(500)
         nav=await ev("()=>[...document.querySelectorAll('.nav a')].map(a=>a.firstChild.textContent)")
-        chk('Nhận mẫu' not in nav and 'Bảng kê và báo giá' in nav,'thủ quỹ trong phòng kiểm định %s'%nav)
+        chk('Nhận mẫu' not in nav and 'Thanh toán và báo giá' in nav,'thủ quỹ trong phòng kiểm định %s'%nav)
         # --- Ban Giám đốc và Hành chính tổng hợp
         await ev("()=>{window.__ptn.setSession(null);localStorage.removeItem('ptn_session');location.hash='dang-nhap'}");await page.wait_for_timeout(500)
         await page.reload();await page.wait_for_function('window.__ptn && window.__ptn.db === true',timeout=15000);await page.wait_for_timeout(500)
@@ -96,7 +96,7 @@ async def main():
         side=await L('.side').inner_text()
         chk('Ban Giám đốc' in side and 'Phó giám đốc' not in side and await L('.side [data-act="wr-sw"]').count()==1,'Phó giám đốc: thanh bên tên đơn vị + chọn phòng xem')
         await L('.side [data-act="wr-sw"]').select_option('kd');await page.wait_for_timeout(500)
-        chk(await ev("()=>window.__ptn.wroom()")=='kd' and 'Bảng kê và báo giá' in await L('.nav').inner_text(),'chuyển xem phòng kiểm định')
+        chk(await ev("()=>window.__ptn.wroom()")=='kd' and 'Thanh toán và báo giá' in await L('.nav').inner_text(),'chuyển xem phòng kiểm định')
         await ev("()=>{location.hash='dich-vu'}");await page.wait_for_timeout(500)
         chk(await L('[data-tab="bk"]').count()==1,'Phó giám đốc xem được bảng kê phòng kiểm định')
         print('errs',errs[:5]);print('ok',ok,'bad',bad)

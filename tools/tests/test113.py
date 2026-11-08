@@ -27,8 +27,11 @@ async def main():
             await ev("([id,r])=>{window.__ptn.setSession(id);window.__ptn.setWroom(r);location.hash='thong-bao'}",['NS018',room]);await page.wait_for_timeout(300)
             await ev("()=>{location.hash='tong-quan'}");await page.wait_for_timeout(500)
             t=await ev("()=>document.querySelector('.side').innerText")
-            chk('Bảng kê và báo giá' in t,'Giàn thấy Bảng kê và báo giá (%s)'%room)
-            chk(('Thanh toán' in t)==(room=='co'),'Giàn thấy mục Thanh toán cũ chỉ ở phòng Cơ điện (%s)'%room)
+            chk('Thanh toán và báo giá' in t,'Giàn thấy Thanh toán và báo giá (%s)'%room)
+            await ev("()=>{location.hash='thanh-toan'}");await page.wait_for_timeout(500)
+            chk((await page.locator('[data-tab="bangke"]').count()==1)==(room=='co'),'tab Bảng kê thanh toán cũ chỉ ở phòng Cơ điện (%s)'%room)
+            chk(await page.locator('[data-tab="bg"]').count()==1,'Giàn có tab Báo giá (%s)'%room)
+            await ev("()=>{location.hash='tong-quan'}");await page.wait_for_timeout(300)
             for bd in ['Thiết bị','Sửa đổi phiếu','Soát xét','Hồ sơ lưu trữ','Giao việc','Cài đặt','Nhận mẫu']:
                 chk(bd not in t,'Giàn không thấy %s (%s)'%(bd,room))
         await ev("()=>{location.hash='thiet-bi'}");await page.wait_for_timeout(300)

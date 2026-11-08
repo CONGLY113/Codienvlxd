@@ -6179,6 +6179,7 @@ function bkPrices(box,canEdit){
   const bar=h('div',{class:'row',style:'gap:8px;flex-wrap:wrap'},
     h('button',{class:'btn primary',disabled:!canEdit,'data-act':'bg-up',onclick:()=>file.click()},'Tải file Excel đơn giá lên'),
     h('button',{class:'btn',disabled:!canEdit,'data-act':'bg-add',onclick:()=>{P.them.push({id:rid(),ten:'',gia:0});q='';BK.pq='';srch.value='';mark();draw();const ins=body.querySelectorAll('input[type=text]');if(ins.length)ins[ins.length-1].focus();}},'Thêm đơn giá'),
+    h('button',{class:'btn',disabled:!canEdit,'data-act':'bg-pull',onclick:()=>ttPullDlg(P,mark,draw,note)},'Lấy giá từ bảng giá ban hành'),
     h('button',{class:'btn','data-act':'bg-dl',onclick:async()=>{await saveBytes('Bang_gia_thi_nghiem_'+todayISO()+'.xlsx',await bkPricesXlsx(P));}},'Tải bảng giá hiện tại (Excel)'),
     file);
   box.append(h('div',{class:'card stack bk-prices'},
@@ -6193,7 +6194,7 @@ function bkPendingGroups(){
   const used=new Set();bkAll().forEach(b=>{if(b.trang_thai!=='huy')(b.ycKeys||[]).forEach(k=>used.add(k));});
   return ycGroups().filter(e=>!used.has(e.key));
 }
-function bkOpenDraft(b){BK.draft=b;BK.dirty=false;BK.tab='bangke';render();}
+function bkOpenDraft(b){BK.draft=b;BK.dirty=false;BK.tab='bangke';TT.src='o';render();}
 function bkList(box,canEdit){
   const f=BK.fil,all=bkAll().filter(b=>b.so).sort((a,b)=>a.so<b.so?1:-1);
   const live=all.filter(b=>b.trang_thai!=='huy'),sumT=l=>l.reduce((a,b)=>a+bkTotals(b).tt,0);
@@ -6356,18 +6357,19 @@ function bkWorkCard(){
       h('tbody',null,items.map(([b,v,l])=>h('tr',null,h('td',null,code(b.so)),h('td',null,b.khach.ten),h('td',null,b.cong_trinh||''),h('td',{class:'num'},fmtN(bkTotals(b).tt)+' đ'),h('td',null,v),
         h('td',null,h('button',{class:'btn sm primary','data-act':'work-open',onclick:()=>bkOpenDraft(JSON.parse(JSON.stringify(b)))},l))))))));
 }
-pages['thanh-toan']={render(root){
+const TT={src:null,uid:null};
+const ttOldPg={render(root,mg){
   const lap=bkLap(),tq=hasRole('tq');bkWatchInit();
   if(BK.uid!==(SESSION&&SESSION.id)){BK.uid=SESSION&&SESSION.id;BK.draft=null;BK.dirty=false;BK.tab='bangke';BK.psel=new Set();BK.sf=null;BK.pdirty=false;BK.pnote='';}
-  root.append(pageHead('Thanh toán','Giai đoạn 1: lập bảng kê, thủ quỹ soát xét và đóng dấu mộc, ghi nhận ký duyệt. Giai đoạn 2: khách thanh toán, kế toán chọn bảng kê, thủ quỹ xác nhận đã thanh toán.'));
+  if(!mg)root.append(pageHead('Thanh toán','Giai đoạn 1: lập bảng kê, thủ quỹ soát xét và đóng dấu mộc, ghi nhận ký duyệt. Giai đoạn 2: khách thanh toán, kế toán chọn bảng kê, thủ quỹ xác nhận đã thanh toán.'));
   const tabs=[['bangke','Bảng kê thanh toán'],['tonghop','Tổng hợp thanh toán'],['banggia','Bảng giá và tài khoản']].concat(lap?[['phieu','Phiếu kết quả, bản giấy']]:[]);
   if(!tabs.some(t=>t[0]===BK.tab))BK.tab='bangke';
-  root.append(h('div',{class:'tabs',role:'tablist',style:'margin-bottom:12px'},tabs.map(([k,l])=>h('button',{role:'tab','aria-selected':BK.tab===k,'data-tab':k,onclick:()=>{
+  if(!mg)root.append(h('div',{class:'tabs',role:'tablist',style:'margin-bottom:12px'},tabs.map(([k,l])=>h('button',{role:'tab','aria-selected':BK.tab===k,'data-tab':k,onclick:()=>{
     if(BK.draft&&BK.dirty&&k!=='bangke'){toast('Lưu hoặc đóng bảng kê đang sửa trước.','bad');return;}
     if(BK.pdirty&&BK.tab==='banggia'&&k!=='banggia'){toast('Bấm Lưu bảng giá trước khi chuyển tab.','bad');return;}
     BK.tab=k;BK.pnote='';if(k!=='bangke'&&BK.draft&&!BK.dirty)BK.draft=null;render();}},l))));
   const box=h('div',{class:'stack'});root.append(box);
-  if(BK.tab==='banggia'){bkBankCard(box,lap);bkPrices(box,lap);}
+  if(BK.tab==='banggia')ttPriceTab(box);
   else if(BK.tab==='tonghop')bkSummary(box,lap,tq);
   else if(BK.tab==='phieu')ttOldRender(box);
   else if(BK.draft)bkEditor(box,lap);else bkList(box,lap);
@@ -6803,7 +6805,7 @@ async function dvDocXlsx(b){
 }
 
 /* ---- trình soạn bảng kê, báo giá */
-function dvOpen(b){DVS.draft=JSON.parse(JSON.stringify(b));DVS.draft.kind=DVS.draft.kind||(b.col&&/^dvbg_/.test(b.col)?'bg':'bk');DVS.dirty=false;DVS.kind=DVS.draft.kind;DVS.tab=DVS.kind;render();}
+function dvOpen(b){DVS.draft=JSON.parse(JSON.stringify(b));DVS.draft.kind=DVS.draft.kind||(b.col&&/^dvbg_/.test(b.col)?'bg':'bk');DVS.dirty=false;DVS.kind=DVS.draft.kind;DVS.tab=DVS.kind;TT.src='d';render();}
 function dvNewDlg(kind){
   const rooms=dvLapRooms().filter(r=>r===wroom()&&(kind==='bg'||r!=='co'));if(!rooms.length){toast('Bạn chưa được giao lập '+(kind==='bg'?'báo giá':'bảng kê')+'.','bad');return;}
   const rs=h('select',{'aria-label':'Phòng',onchange:()=>fillM()},rooms.map(r=>h('option',{value:r},dvRoomName(r)))),ms=h('select',{'aria-label':'Mảng dịch vụ'});
@@ -7062,25 +7064,104 @@ async function dvImportPrices(m,file){
     const ok=await safe(()=>Data.set('dv_gia/'+m,doc).then(()=>true),'Không lưu được bảng giá.');if(ok){await logAudit('Nhập bảng giá '+DV_MANG[m].ten,items.length+' mục · '+doc.meta.qd);toast('Đã lưu bảng giá mới ('+items.length+' mục).');dlg.close();render();}}},'Lưu bảng giá')]});
 }
 /* ---- trang */
-pages['dich-vu']={render(root){
+const ttDvPg={render(root,mg){
   if(DVS.uid!==(SESSION&&SESSION.id+'|'+wroom())){DVS.uid=SESSION&&SESSION.id+'|'+wroom();DVS.draft=null;DVS.dirty=false;DVS.tab='bk';DVS.room='';}
   dvWatchInit();
   const bkOk=dvRoomsFor('bk').length>0,tabs=[].concat(bkOk?[['bk','Bảng kê']]:[],[['bg','Báo giá']],bkOk?[['no','Công nợ'],['th','Tổng hợp thanh toán'],['cn','Giấy chứng nhận']]:[],[['gia','Bảng giá']]);
   if(!tabs.some(t=>t[0]===DVS.tab))DVS.tab=tabs[0][0];
-  root.append(pageHead('Bảng kê và báo giá dịch vụ',WR_NAME[wroom()]+'. '+(bkOk?'Bảng kê: thủ quỹ soát xét, kế toán trưởng duyệt. ':'Bảng kê của phòng này lập ở trang Thanh toán. ')+'Báo giá: trưởng phòng duyệt.'));
-  root.append(h('div',{class:'tabs',role:'tablist',style:'margin-bottom:12px'},tabs.map(([k,l])=>h('button',{role:'tab','aria-selected':DVS.tab===k,'data-tab':k,onclick:()=>{
+  if(!mg)root.append(pageHead('Bảng kê và báo giá dịch vụ',WR_NAME[wroom()]+'. '+(bkOk?'Bảng kê: thủ quỹ soát xét, kế toán trưởng duyệt. ':'Bảng kê của phòng này lập ở trang Thanh toán. ')+'Báo giá: trưởng phòng duyệt.'));
+  if(!mg)root.append(h('div',{class:'tabs',role:'tablist',style:'margin-bottom:12px'},tabs.map(([k,l])=>h('button',{role:'tab','aria-selected':DVS.tab===k,'data-tab':k,onclick:()=>{
     if(DVS.draft&&DVS.dirty){toast('Lưu hoặc đóng văn bản đang sửa trước.','bad');return;}
     DVS.tab=k;DVS.draft=null;render();}},l))));
   const box=h('div',{class:'stack'});root.append(box);
   if(DVS.draft&&(DVS.tab==='bk'||DVS.tab==='bg')&&DVS.draft.kind===DVS.tab)dvEditor(box);
   else if(DVS.tab==='bk'||DVS.tab==='bg')dvList(box,DVS.tab);
-  else if(DVS.tab==='no')dvDebt(box);else if(DVS.tab==='th')dvSummary(box);else if(DVS.tab==='cn')dvCert(box);else dvPrices(box);
+  else if(DVS.tab==='no')dvDebt(box);else if(DVS.tab==='th')dvSummary(box);else if(DVS.tab==='cn')dvCert(box);else ttPriceTab(box);
 },update(){
   if(DVS.draft){if(!DVS.dirty&&DVS.draft.id){const st=DVS.draft.kind==='bk'?DVBK:DVBG,cur=dvAll(st).find(x=>x.id===DVS.draft.id&&x.col===DVS.draft.col);
     if(cur&&((cur.sua||{}).at!==(DVS.draft.sua||{}).at)&&!document.querySelector('#modal-root .overlay')){DVS.draft=JSON.parse(JSON.stringify(cur));DVS.draft.kind=DVS.draft.kind||DVS.tab;render();}}return;}
   if(document.querySelector('#modal-root .overlay'))return;
   const a=document.activeElement;if(a&&a.type==='text'&&a.placeholder)return;if(a&&/INPUT|SELECT/.test(a.tagName)&&a.closest&&a.closest('#view,main,.main'))return;render();}};
 
+/* ===== 0.27.6 B7c: một trang Thanh toán và báo giá (gộp trang Thanh toán và trang Bảng kê, báo giá) ===== */
+const ttOldRoles=()=>['kt','tp','tq','ktt','pd','pgd'].some(r=>hasRole(r));
+const ttOldOk=()=>!!SESSION&&wroom()==='co'&&ttOldRoles();
+function ttOldCount(){const L=bkAll();let n=0;if(hasRole('tq'))n+=L.filter(b=>b.trang_thai==='cho_soat').length+bkPendingPays().length;if(bkLap())n+=L.filter(b=>b.trang_thai==='nhap').length+bkPendingGroups().length;if(bkDuyet())n+=L.filter(b=>b.trang_thai==='da_soat').length;return n;}
+/* danh sách tab: [khóa, nhãn, nguồn 'o' = bảng kê thanh toán của Cơ điện, 'd' = bảng kê, báo giá theo phòng] */
+function ttTabs(){
+  const old=ttOldOk(),dv=dvShow(),bkOk=dv&&dvRoomsFor('bk').length>0,lap=bkLap(),t=[];
+  if(old)t.push(['bangke','Bảng kê thanh toán','o']);
+  if(bkOk)t.push(['bk','Bảng kê','d']);
+  if(dv)t.push(['bg','Báo giá','d']);
+  if(bkOk)t.push(['no','Công nợ','d']);
+  if(old)t.push(['tonghop','Tổng hợp thanh toán','o']);else if(bkOk)t.push(['th','Tổng hợp thanh toán','d']);
+  if(bkOk)t.push(['cn','Giấy chứng nhận','d']);
+  if(old)t.push(['banggia','Bảng giá và tài khoản','o']);else if(dv)t.push(['gia','Bảng giá và tài khoản','d']);
+  if(old&&lap)t.push(['phieu','Phiếu kết quả, bản giấy','o']);
+  return t;
+}
+/* một tab Bảng giá và tài khoản cho mọi phòng: tài khoản nhận tiền dùng chung, bảng giá ban hành (dùng cho báo giá và bảng kê),
+   riêng Cơ điện còn đơn giá theo loại mẫu cho bảng kê tự tính từ mẫu đã phát hành (nạp được từ bảng giá ban hành) */
+function ttPriceTab(box){
+  bkBankCard(box,bkLap());
+  if(dvShow())dvPrices(box);
+  if(ttOldOk()){
+    const inner=h('div',{class:'stack'});bkPrices(inner,bkLap());
+    const n=Object.keys(S.bgia||{}).length+Object.keys(S.bgiaCt||{}).length+(S.bgiaThem||[]).length;
+    const d=h('details',{class:'card stack','data-sec':'old-prices'},h('summary',null,h('b',null,'Đơn giá theo loại mẫu cho bảng kê thanh toán'),h('span',{class:'muted small'},' · '+(n?n+' mục đã có giá':'chưa có giá, bấm Lấy giá từ bảng giá ban hành'))),
+      h('p',{class:'muted small'},'Bảng giá ban hành ở trên dùng cho báo giá. Bảng này là đơn giá theo loại mẫu và chỉ tiêu để bảng kê thanh toán tự tính từ mẫu đã phát hành. Dùng nút Lấy giá từ bảng giá ban hành để điền sẵn rồi kiểm tra và lưu, không phải nhập lại.'),inner);
+    d.open=!!(n||BK.pdirty||BK.pq);box.append(d);
+  }
+}
+/* nạp đơn giá theo loại mẫu và chỉ tiêu từ bảng giá ban hành của Cơ điện (mảng vlxd): khớp theo tên nhóm và tên chỉ tiêu, mơ hồ thì bỏ qua */
+const TT_DA='Đá dăm, sỏi xây dựng',TT_GACH='Gạch xây đất sét nung',TT_GROUP={CAT_XD:'Cát xây dựng',DA_5_20:TT_DA,DA_10_40:TT_DA,DA_20_70:TT_DA,XM_PCB30:'Xi măng',XM_PCB40:'Xi măng',DA_GOC:'Đá gốc (Đá nguyên khai)',GACH_DAC:TT_GACH,GACH_2L:TT_GACH,GACH_6L:TT_GACH,NHUA_6070:'Nhựa đường',NHUA_MC70:'Nhựa đường'};
+function ttPullPlan(P,over){
+  const bk=dvBook('vlxd'),by={};(bk.items||[]).forEach(it=>{(by[it.n||'']=by[it.n||'']||[]).push(it);});
+  const R={gia:[],ct:[],miss:[],amb:0,keep:0};let grp=null,gname='';
+  bkPriceCatalog().forEach(e=>{
+    if(e.kind==='loai'){gname=BK_UNIT[e.key]?'':(TT_GROUP[e.key]||'');grp=gname?by[gname]:null;
+      if(!grp){R.miss.push(e.ten);return;}
+      const tot=grp.find(x=>x.tr&&+x.g>0);if(!tot)return;
+      if(!over&&+P.gia[e.key]>0){R.keep++;return;}R.gia.push([e.key,+tot.g,e.ten]);return;}
+    if(!grp)return;
+    const nn=bkNorm(e.ten),L=grp.filter(x=>!x.tr&&+x.g>0);let m=L.filter(x=>bkNorm(x.t)===nn);
+    if(!m.length)m=L.filter(x=>{const a=bkNorm(x.t);return a&&(a.includes(nn)||nn.includes(a));});
+    if(m.length!==1){if(m.length>1)R.amb++;return;}
+    if(!over&&+P.ct[e.key]>0){R.keep++;return;}R.ct.push([e.key,+m[0].g,e.ten]);});
+  return R;
+}
+function ttPullDlg(P,mark,draw,note){
+  const over=h('select',{'aria-label':'Cách điền'},h('option',{value:'0'},'Chỉ điền ô đang trống, giữ giá đã nhập'),h('option',{value:'1'},'Ghi đè cả giá đã nhập'));
+  const sum=h('div',{class:'stack'}),calc=()=>{const R=ttPullPlan(P,over.value==='1');
+    sum.replaceChildren(h('div',{class:'banner','data-tone':R.gia.length+R.ct.length?'info':'warn'},h('div',null,'Sẽ điền '+R.gia.length+' giá trọn theo loại mẫu và '+R.ct.length+' giá theo chỉ tiêu từ bảng giá ban hành (Cơ điện, vật liệu xây dựng).'+(R.keep?' Giữ nguyên '+R.keep+' ô đã có giá.':'')+(R.amb?' Bỏ qua '+R.amb+' chỉ tiêu có nhiều dòng giá trùng tên.':''))),
+      R.miss.length?h('p',{class:'muted small'},'Để trống, nhập tay (tính theo tổ, theo điểm đo hoặc chưa có nhóm giá tương ứng): '+R.miss.join(', ')+'.'):null,
+      (R.gia.length||R.ct.length)?h('div',{class:'tbl-wrap',style:'max-height:260px;overflow:auto'},h('table',null,h('thead',null,h('tr',null,['Mục','Đơn giá (đ)'].map(x=>h('th',null,x)))),h('tbody',null,R.gia.concat(R.ct).slice(0,200).map(x=>h('tr',null,h('td',null,x[2]),h('td',{class:'num'},fmtN(x[1]))))))):null);return R;};
+  over.addEventListener('change',calc);calc();
+  const m=openModal({title:'Lấy giá từ bảng giá ban hành',sub:'Giá chỉ được điền vào bảng, chưa lưu. Kiểm tra rồi bấm Lưu bảng giá.',body:[bkF('Cách điền',over),sum],
+    actions:[h('button',{class:'btn',onclick:()=>m.close()},'Hủy'),h('button',{class:'btn primary','data-act':'bg-pull-ok',onclick:()=>{const R=ttPullPlan(P,over.value==='1');if(!R.gia.length&&!R.ct.length){toast('Không có giá nào để điền.','bad');return;}
+      R.gia.forEach(x=>{P.gia[x[0]]=x[1];});R.ct.forEach(x=>{P.ct[x[0]]=x[1];});mark();BK.pnote='Đã điền '+R.gia.length+' giá trọn và '+R.ct.length+' giá chỉ tiêu từ bảng giá ban hành. Kiểm tra rồi bấm Lưu bảng giá.';
+      note.replaceChildren(h('div',null,BK.pnote));note.hidden=false;draw();m.close();}},'Điền vào bảng')]});
+}
+pages['thanh-toan']={render(root){
+  const sid=SESSION&&SESSION.id;
+  if(BK.uid!==sid){BK.uid=sid;BK.draft=null;BK.dirty=false;BK.tab='bangke';BK.psel=new Set();BK.sf=null;BK.pdirty=false;BK.pnote='';}
+  if(DVS.uid!==(sid+'|'+wroom())){DVS.uid=sid+'|'+wroom();DVS.draft=null;DVS.dirty=false;DVS.tab='bk';DVS.room='';}
+  if(TT.uid!==DVS.uid){TT.uid=DVS.uid;TT.src=null;}
+  if(ttOldOk())bkWatchInit();if(dvShow())dvWatchInit();
+  const T=ttTabs();if(!T.length){root.append(pageHead('Thanh toán và báo giá','Tài khoản của bạn chưa được giao việc ở mục này.'));return;}
+  let cur=TT.src==='o'?T.find(x=>x[2]==='o'&&x[0]===BK.tab):TT.src==='d'?T.find(x=>x[2]==='d'&&x[0]===DVS.tab):null;
+  if(!cur)cur=T[0];TT.src=cur[2];if(cur[2]==='o')BK.tab=cur[0];else DVS.tab=cur[0];
+  const old=ttOldOk(),bkOk=dvShow()&&dvRoomsFor('bk').length>0;
+  root.append(pageHead('Thanh toán và báo giá',WR_NAME[wroom()]+'. '+(old?'Bảng kê thanh toán: cán bộ lập, thủ quỹ soát xét và đóng dấu mộc, ghi nhận ký duyệt; khách thanh toán, kế toán chọn bảng kê, thủ quỹ xác nhận đã thanh toán. ':bkOk?'Bảng kê: thủ quỹ soát xét, kế toán trưởng duyệt. ':'')+'Báo giá: trưởng phòng duyệt. Một bảng giá và một tài khoản nhận tiền dùng chung.'));
+  root.append(h('div',{class:'tabs',role:'tablist',style:'margin-bottom:12px'},T.map(([k,l,src])=>h('button',{role:'tab','aria-selected':cur[0]===k,'data-tab':k,onclick:()=>{
+    if(k===cur[0])return;
+    if(BK.draft&&BK.dirty){toast('Lưu hoặc đóng bảng kê đang sửa trước.','bad');return;}
+    if(DVS.draft&&DVS.dirty){toast('Lưu hoặc đóng văn bản đang sửa trước.','bad');return;}
+    if(BK.pdirty&&BK.tab==='banggia'){toast('Bấm Lưu bảng giá trước khi chuyển tab.','bad');return;}
+    if(BK.draft&&!BK.dirty)BK.draft=null;DVS.draft=null;BK.pnote='';
+    TT.src=src;if(src==='o')BK.tab=k;else DVS.tab=k;render();}},l))));
+  (cur[2]==='o'?ttOldPg:ttDvPg).render(root,true);
+},update(){(TT.src==='o'?ttOldPg:ttDvPg).update();}};
 /* ===== HẾT MODULE ===== */
 /* ===== 0.27.1 PHÒNG LÀM VIỆC: mỗi phòng một không gian riêng ===== */
 const WR_ALL=['co','kd','hs'];
@@ -7210,20 +7291,19 @@ const NAV=[
  {k:'soat-xet',t:'Soát xét, phê duyệt',show:()=>hasRole('sx')||hasRole('pd'),count:()=>S.samples.filter(s=>(s.status==='cho_soat_xet'&&canSxFor(s))||(hasRole('pd')&&s.status==='cho_phe_duyet'&&!(s.giao&&s.giao.ma_nv===SESSION.id)&&!sxLock(s))).length},
  {k:'luu-tru',t:'Hồ sơ lưu trữ',show:()=>!hasRole('pgd')},
  {k:'sua-phieu',t:'Sửa đổi phiếu',show:()=>['tiepnhan','tp','sx','pd','ql'].some(hasRole),count:()=>sdMyCount()},
- {k:'thanh-toan',t:'Thanh toán',show:()=>['kt','tp','tq','ktt','pd','pgd'].some(r=>hasRole(r)),count:()=>{const L=bkAll();let n=0;if(hasRole('tq'))n+=L.filter(b=>b.trang_thai==='cho_soat').length+bkPendingPays().length;if(bkLap())n+=L.filter(b=>b.trang_thai==='nhap').length+bkPendingGroups().length;if(bkDuyet())n+=L.filter(b=>b.trang_thai==='da_soat').length;return n;}},
- {k:'dich-vu',t:'Bảng kê và báo giá',show:()=>dvShow(),count:()=>dvMineCount()},
+ {k:'thanh-toan',t:'Thanh toán và báo giá',show:()=>ttOldOk()||dvShow(),count:()=>(ttOldOk()?ttOldCount():0)+(dvShow()?dvMineCount():0)},
  {k:'thong-ke',t:'Thống kê',show:()=>hasRole('tp')||hasRole('ql')||hasRole('kt')},
  {k:'quan-trac',t:'Tổng hợp quan trắc gốc',show:()=>hasRole('tp')||hasRole('ql')},
  {k:'thiet-bi',t:'Thiết bị',show:()=>!hasRole('pgd')},
  {k:'nhat-ky',t:'Nhật ký',show:()=>hasRole('tp')||hasRole('ql')},
  {k:'mau-bieu',t:'Biểu mẫu báo cáo',show:()=>hasRole('tp')||hasRole('ql')||hasRole('tn')},
  {k:'cai-dat',t:'Cài đặt',show:()=>hasRole('tp')}];
-NAV.forEach(n=>{if(!['tong-quan','thong-bao','luu-tru','thiet-bi','dich-vu'].includes(n.k)){const o=n.show;n.show=()=>wroom()==='co'&&o();}});
+NAV.forEach(n=>{if(!['tong-quan','thong-bao','luu-tru','thiet-bi','thanh-toan'].includes(n.k)){const o=n.show;n.show=()=>wroom()==='co'&&o();}});
 
 const TABSHORT={'tong-quan':'Tổng quan','nhiem-vu':'Việc của tôi','nhan-mau':'Nhận mẫu','giao-viec':'Giao việc','soat-xet':'Soát xét','thanh-toan':'Thanh toán','luu-tru':'Lưu trữ','thiet-bi':'Thiết bị'};
 const TABIC={'tong-quan':'home','nhiem-vu':'task','nhan-mau':'inbox','giao-viec':'assign','soat-xet':'check','thanh-toan':'pay','luu-tru':'archive','thiet-bi':'tool'};
 function labelTables(root){root.querySelectorAll('table').forEach(t=>{const hs=[...t.querySelectorAll('thead th')].map(x=>x.textContent.trim());if(!hs.length)return;t.querySelectorAll('tbody tr').forEach(tr=>{[...tr.children].forEach((td,i)=>{if(!td.hasAttribute('data-label'))td.setAttribute('data-label',hs[i]||'');});});});}
-function route(){const k=(location.hash||'').replace(/^#/,'');if(/^tc-/.test(k))return 'tra-cuu';return pages[k]?k:null;}
+function route(){let k=(location.hash||'').replace(/^#/,'');if(k==='dich-vu')k='thanh-toan';if(/^tc-/.test(k))return 'tra-cuu';return pages[k]?k:null;}
 function refreshNav(){const nv=$('.nav');if(!nv)return;NAV.filter(n=>n.show()).forEach(n=>{const a=nv.querySelector('[data-k="'+n.k+'"] .count');if(!n.count)return;const c=n.count();
   if(a){a.textContent=c;a.hidden=!c;}});}
 function render(){

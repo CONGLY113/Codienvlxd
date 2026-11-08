@@ -152,10 +152,10 @@ async def main():
         # excel mẫu
         x=await ev("""async()=>{const P=window.__ptn;const u=await P.dvPriceXlsx(['atld']);return u.length}""")
         chk(x>2000,'xuất bảng giá xlsx')
-        chk(await page.locator('.nav [data-k="dich-vu"]').count()==1,'menu có mục')
+        chk(await page.locator('.nav [data-k="thanh-toan"]').count()==1 and await page.locator('.nav [data-k="dich-vu"]').count()==0,'một mục menu Thanh toán và báo giá')
         # thanh toán cũ vẫn mở
         await ev("()=>{location.hash='thanh-toan'}");await page.wait_for_timeout(600)
-        chk(await page.locator('text=Thanh toán').count()>0,'trang thanh toán cũ còn')
+        chk(await page.locator('text=Thanh toán').count()>0,'trang thanh toán và báo giá mở được')
         chk('nullnull' not in (await page.inner_text('body')),'không còn chữ null')
         print('errs',errs[:5]);print('ok',ok,'bad',bad)
 asyncio.run(main())
