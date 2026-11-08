@@ -2172,6 +2172,49 @@ const nenLayout=(C,bt)=>{const {put,rmRows,rowH,addMerge,delMerge,setCols,cellsO
   delMerge('G44:H44');addMerge('G44:J44');
 };
 PK_LAYOUT.NEN_BT=C=>nenLayout(C,true);PK_LAYOUT.NEN_VUA=C=>nenLayout(C,false);
+/* thép xây dựng (12 cột) và bu lông (10 cột): bảng kết quả rộng hơn 8 cột nên các dòng gộp ô của phần thông tin kéo dài theo */
+const wideForm=(C,w)=>{C.setCols(w.map(x=>({w:x})));C.lastCol=String.fromCharCode(64+w.length);C.widen('H',C.lastCol);};
+const plBlk=C=>(a,b,o,v)=>{const L=n=>String.fromCharCode(64+n),q1=/^([A-Z]+)(\d+)$/.exec(a),q2=/^([A-Z]+)(\d+)$/.exec(b);
+  for(let r=+q1[2];r<=+q2[2];r++)for(let c=C.colNum(q1[1]);c<=C.colNum(q2[1]);c++){const ref=L(c)+r,first=ref===a;
+    if(first&&v!=null&&typeof v==='object'&&v.f!=null)C.put(ref,{f:v.f,s:o});else C.put(ref,{v:first?v:'',s:o});}
+  if(a!==b)C.addMerge(a+':'+b);};
+/* dựng lại khối thông tin (hàng 7..19) cho biểu mẫu rộng: nhãn ở A..C, giá trị gộp từ D đến cột cuối; mỗi mục một dòng */
+const plHead=C=>{const {put,rmRows,rowH,addMerge,cellsOf,txt,rows,sample}=C,L=n=>String.fromCharCode(64+n),colOf=c=>(c.getAttribute('r').match(/^[A-Z]+/)||[''])[0];
+  const lc=C.lastCol,items=[];
+  for(let r=7;r<=19;r++){const row=rows[r];if(!row||row.getAttribute('hidden')==='1')continue;const cs=cellsOf(r),a=cs.find(c=>colOf(c)==='A'),la=a?txt(a).trim():'';if(!la)continue;
+    const vc=cs.find(c=>colOf(c)==='C');items.push({l:la,v:vc?txt(vc):''});
+    const e=cs.find(c=>colOf(c)==='E'),le=e?txt(e).trim():'';if(le&&le!=='Mã mẫu:'){const g=cs.find(c=>colOf(c)==='G');items.push({l:le,v:g?txt(g):''});}}
+  rmRows(7,19);for(let r=7;r<=19;r++)if(rows[r])rows[r].removeAttribute('hidden');
+  const da=sample.du_an||{},gv=sample.giao&&sample.giao.ma_gv,len={'công trình':da.cong_trinh,'hạng mục':da.hang_muc,'chủ đầu tư':da.chu_dau_tu,'đơn vị giám sát':da.giam_sat,'đơn vị thi công':da.thi_cong,'địa chỉ':da.dia_chi,'căn cứ':gv?'Căn cứ phiếu yêu cầu và giao nhiệm vụ thử nghiệm '+gv:''};
+  const w=C.totalW||64,cpl=Math.max(30,Math.floor(w*0.95)),hh=n=>{const k=Math.max(1,Math.ceil((n||0)/cpl));return k<=1?15:Math.round(13.5*k+3);};
+  items.forEach((it,i)=>{const r=7+i;if(r>19)return;put('A'+r,{v:it.l,s:{al:'left',wrap:false}});
+    const v=/^=/.test(it.v)?{f:it.v.slice(1)}:it.v,dt=typeof v==='object'&&/^Ngày/.test(it.l);
+    plBlk(C)('D'+r,lc+r,dt?{al:'left',num:'dd/mm/yyyy'}:{al:'left'},v);
+    const key=Object.keys(len).find(k=>it.l.toLowerCase().startsWith(k));rowH(r,key?hh(String(len[key]||'').length):15);
+    if(key==='hạng mục'&&!String(len[key]||'').trim())rows[r].setAttribute('hidden','1');});
+  for(let r=7+items.length;r<=19;r++)rowH(r,3);
+};
+PK_LAYOUT.THEP_XD=C=>{const {put,rmRows,rowH}=C,L=n=>String.fromCharCode(64+n);
+  rmRows(22,31);wideForm(C,[4,6,9,9,7,7,8,7,8,7,8,10]);C.totalW=64;plHead(C);
+  const H={b:1,bd:'lrtb',sz:10},D={bd:'lrtb',sz:10};
+  ['TT','Loại\n(mm)','Ký hiệu','Khối lượng/\n1 m dài\n(kg/m)','Đ.kính\nthực\n(mm)','Lực\nchảy\n(kN)','Giới hạn\nchảy\n(N/mm²)','Lực\nđứt\n(kN)','Giới hạn\nđứt\n(N/mm²)','Dãn dài\nt.đối\n(%)','Sai lệch\nkhối\nlượng\n(%)','Kết quả\nthử uốn'].forEach((t,i)=>put(L(i+1)+'22',{v:t,s:H}));
+  rowH(22,52);
+  for(let i=0;i<9;i++){const r=23+i,q=10+i,g=5+Math.floor(i/3),S=c=>'So_lieu!'+c+q,cell=(col,f)=>put(col+r,{f,s:D}),fx=(c,dp)=>'IF('+S(c)+'="","",FIXED('+S(c)+','+dp+',TRUE))';
+    cell('A','IF(ISNUMBER('+S('B')+'),'+(i+1)+',"")');cell('B','IF(ISNUMBER('+S('B')+'),"D"&'+S('B')+',"")');
+    cell('C','IF(OR(NOT(ISNUMBER('+S('B')+')),So_lieu!C'+g+'=""),"",So_lieu!C'+g+')');
+    cell('D',fx('M','dp_kg'));cell('E',fx('L','dp_dk'));cell('F',fx('G','dp_luc'));cell('G',fx('P','dp_gh'));cell('H',fx('H','dp_luc'));cell('I',fx('Q','dp_gh'));
+    cell('J',fx('R','dp_dd'));cell('K',fx('O','dp_sl'));cell('L','IF('+S('I')+'="","",'+S('I')+')');rowH(r,19);}
+  rowH(33,16);rowH(34,10);rowH(35,10);rowH(36,10);
+};
+PK_LAYOUT.BU_LONG=C=>{const {put,rmRows,rowH}=C,L=n=>String.fromCharCode(64+n);
+  rmRows(23,29);wideForm(C,[5,11,9,9,9,10,9,10,8,10]);C.totalW=64;plHead(C);
+  const H={b:1,bd:'lrtb',sz:10},D={bd:'lrtb',sz:10};
+  ['TT','Ký hiệu\nmẫu','Đường kính\nthực\n(mm)','Tiết diện\nmẫu\n(mm²)','Lực\nchảy\n(kN)','Giới hạn\nchảy\n(N/mm²)','Lực\nđứt\n(kN)','Giới hạn\nđứt\n(N/mm²)','Độ dãn\ndài\n(%)','Ghi chú'].forEach((t,i)=>put(L(i+1)+'23',{v:t,s:H}));
+  rowH(23,58);
+  for(let i=0;i<6;i++){const r=24+i,q=10+i,S=c=>'So_lieu!'+c+q,cell=(col,f)=>put(col+r,{f,s:D}),ok='So_lieu!D'+q+'=""',fx=(c,dp,dep)=>'IF(OR('+ok+','+S(dep||c)+'=""),"",FIXED('+S(c)+','+dp+',TRUE))';
+    cell('A','IF('+ok+',"",'+(i+1)+')');cell('B','IF('+ok+',"",'+S('B')+')');cell('C','IF('+ok+',"",FIXED('+S('C')+',1,TRUE))');cell('D','IF('+ok+',"",FIXED('+S('D')+',dp_dt,TRUE))');
+    cell('E',fx('E','dp_luc','F'));cell('F',fx('F','dp_gh'));cell('G',fx('G','dp_luc','H'));cell('H',fx('H','dp_gh'));cell('I',fx('I','dp_dd'));put('J'+r,{v:'',s:D});rowH(r,22);}
+};
 /* chỉnh riêng theo loại mẫu: nofill = bỏ nền màu; hide = ẩn hàng theo nhãn cột A; drop = xóa ô nhãn và ô giá trị cùng hàng; rep = đổi chữ (tiêu chuẩn) ở Phieu_KQ và So_lieu */
 const PK_TYPE=(()=>{const xm={nofill:1,hide:['Phương pháp thử:'],rep:[['TCVN 4030:2003','TCVN 13605:2023']]},nh={hide:['Phương pháp thử:']},ln={nofill:1};
   return{XM_PCB30:xm,XM_PCB40:xm,DO_CS:{nofill:1,drop:['Khu vực đo:'],hide:['Ghi chú đo:']},
@@ -2237,13 +2280,14 @@ async function patchPhieuCommon(zip,sample,extra,form){
     else if(typeof o.v==='number'){const v=doc.createElementNS(NS_X,'v');v.textContent=String(o.v);c.appendChild(v);}
     else if(o.v!=null&&o.v!==''){setT(c,String(o.v));if(o.s)c.setAttribute('s',String(xf(o.s)));}return c;};
   const rmRows=(r1,r2)=>{for(let r=r1;r<=r2;r++){const row=rows[r];if(!row)continue;while(row.firstChild)row.removeChild(row.firstChild);row.removeAttribute('ht');row.removeAttribute('customHeight');}
-    if(mc)Array.from(mc.getElementsByTagName('mergeCell')).forEach(m=>{const q=/^[A-Z]+(\d+):[A-Z]+(\d+)$/.exec(m.getAttribute('ref')||'');if(q&&+q[1]>=r1&&+q[2]<=r2)mc.removeChild(m);});mcSync();};
+    if(mc)Array.from(mc.getElementsByTagName('mergeCell')).forEach(m=>{const q=/^[A-Z]+(\d+)(?::[A-Z]+(\d+))?$/.exec(m.getAttribute('ref')||'');if(q&&+q[1]>=r1&&+(q[2]||q[1])<=r2)mc.removeChild(m);});mcSync();};
   const rowH=(r,h)=>{const e=mkRow(r);e.setAttribute('ht',String(h));e.setAttribute('customHeight','1');};
   const grid=(r1,r2,c1,c2,o)=>{for(let r=r1;r<=r2;r++)for(let c=colNum(c1);c<=colNum(c2);c++){const L=String.fromCharCode(64+c);if(!cellsOf(r).some(x=>x.getAttribute('r')===L+r)||true){const e=cellEl(L+r);if(!e.getAttribute('s'))e.setAttribute('s',String(xf(o)));}}};
   const colsEl=doc.getElementsByTagName('cols')[0];
   const setCols=spec=>{if(!colsEl)return;while(colsEl.firstChild)colsEl.removeChild(colsEl.firstChild);
     spec.forEach((o,i)=>{const e=doc.createElementNS(NS_X,'col');e.setAttribute('min',String(i+1));e.setAttribute('max',String(i+1));e.setAttribute('width',String(o.w));e.setAttribute('customWidth','1');if(o.hidden)e.setAttribute('hidden','1');colsEl.appendChild(e);});};
-  const CTX={doc,sd,rows,mkRow,cellsOf,txt,put,rmRows,rowH,addMerge,delMerge,setCols,xf,grid,colNum,sample,extra,form,lastCol:''};
+  const widen=(a,b)=>{if(!mc)return;Array.from(mc.getElementsByTagName('mergeCell')).forEach(m=>{const q=/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(m.getAttribute('ref')||'');if(q&&q[3]===a)m.setAttribute('ref',q[1]+q[2]+':'+b+q[4]);});};
+  const CTX={doc,sd,rows,mkRow,cellsOf,txt,put,rmRows,rowH,addMerge,delMerge,setCols,widen,xf,grid,colNum,sample,extra,form,lastCol:''};
   /* 1. dòng đầu trang: bỏ tiêu đề, ngày thử, thiết bị, mã mẫu; quy cách; chữ thường */
   for(let r=1;r<=maxHead;r++){const cs=cellsOf(r);if(!cs.length)continue;const a=cs.find(c=>colOf(c)==='A'),ta=txt(a).trim();
     if(r<=6&&ta==='PHIẾU KẾT QUẢ THỬ NGHIỆM')rows[r].setAttribute('hidden','1');
@@ -2776,6 +2820,7 @@ async function issuedParts(zip,x){
   if(x.thay_the){const t=x.thay_the;sdl.push('Phiếu này thay thế phiếu số '+t.bc_cu+' ngày '+fd(String(t.at_cu||'').slice(0,10))+' (hồ sơ '+t.ma_sd+'). Lý do: '+(t.ly_do||''));
     sdl.push('Nội dung thay đổi: '+(t.doi||[]).map(y=>y.l+' từ “'+y.cu+'” thành “'+y.moi+'”').join('; ')+'. Số liệu thử nghiệm không đổi.');}
   const rows=line(R+1,'Số báo cáo: '+x.bc)+line(R+2,x.url?('Tra cứu: '+x.url):'Tra cứu: nhập số báo cáo ở trang Tra cứu của web app')+line(R+3,cut(sdl[0]||'',190))+line(R+4,cut(sdl[1]||'',190));
+  for(let k=1;k<=4;k++)xml=xml.replace(new RegExp('<row r="'+(R+k)+'"(?:[^>]*?/>|[^>]*>\\s*</row>)'),''); /* hàng trống có sẵn ở R+1..R+4 bỏ đi để không trùng số hàng */
   const insAt=(()=>{const re=/<row r="(\d+)"/g;let q;while((q=re.exec(xml))){if(+q[1]>R+4)return q.index;}return -1;})();
   xml=insAt>=0?xml.slice(0,insAt)+rows+xml.slice(insAt):xml.replace('</sheetData>',()=>rows+'</sheetData>');
   const mg=[R+1,R+2,R+3,R+4].map(r=>'<mergeCell ref="C'+r+':H'+r+'"/>').join('');
