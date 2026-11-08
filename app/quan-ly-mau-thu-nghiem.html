@@ -10,6 +10,15 @@
 .mf input{font-size:18px!important;min-height:48px!important;font-family:var(--f-mono)}
 .mf input[type=checkbox]{min-height:0!important;width:20px;height:20px;flex:none}
 .mf input::placeholder{color:var(--ink-2);opacity:.4}
+.dash-live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}.dash-live i{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:dashPulse 2s infinite}@keyframes dashPulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.dash-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.dash-kpi>div{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden}.dash-kpi>div::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}.dash-kpi>div[data-tone="bad"]::before{background:var(--bad)}.dash-kpi>div[data-tone="ok"]::before{background:var(--ok)}.dash-kpi>div[data-tone="warn"]::before{background:var(--warn)}.dash-kpi b{font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}.dash-kpi span{font-size:12px;color:var(--ink-2)}
+.dash-team{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}.dash-tn{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.dash-tn-h{display:flex;align-items:center;gap:10px}.dash-av{width:38px;height:38px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:14px;flex:none;position:relative}.dash-av::after{content:"";position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--surface);background:var(--line)}.dash-av[data-on="1"]::after{background:var(--ok)}.dash-av[data-on="2"]::after{background:var(--warn)}
+.dash-tn-h b{display:block;font-size:14px}.dash-tn-h small{color:var(--ink-2);font-size:12px}
+.dash-seg{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--surface-2);gap:1px}.dash-seg i{display:block;height:100%;min-width:3px}.dash-seg i[data-t="giao"]{background:#8A9BA1}.dash-seg i[data-t="thu"]{background:var(--warn)}.dash-seg i[data-t="lai"]{background:var(--bad)}.dash-seg i[data-t="duyet"]{background:var(--accent)}.dash-seg i[data-t="xong"]{background:var(--ok)}
+.dash-chips{display:flex;flex-wrap:wrap;gap:6px}.dash-chips span{font-size:11.5px;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--ink-2);display:inline-flex;gap:5px;align-items:center}.dash-chips span b{font-variant-numeric:tabular-nums;color:var(--ink)}.dash-chips span[data-t="thu"]{background:var(--warn-soft);color:var(--warn)}.dash-chips span[data-t="lai"],.dash-chips span[data-t="late"]{background:var(--bad-soft);color:var(--bad)}.dash-chips span[data-t="xong"]{background:var(--ok-soft);color:var(--ok)}.dash-chips span[data-t="duyet"]{background:var(--accent-soft);color:var(--accent)}
+.dash-job{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:12.5px;padding:6px 0;border-top:1px dashed var(--line)}.dash-job .mf-bar{grid-column:1/-1;margin-top:3px;height:5px}.dash-job[data-late="1"] .when{color:var(--bad);font-weight:600}
+.dash-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-2)}.dash-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .mf-live{display:flex;justify-content:space-between;gap:8px;margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--accent-soft);font-size:13px}.mf-live b{font-family:var(--f-mono)}.mf-live[data-bad="1"]{background:var(--bad-soft);color:var(--bad)}
 .mf-act{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;justify-content:center}.mf-act .btn{min-height:48px;flex:1;max-width:260px;font-size:15px}
 .mf-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:99px;font-size:13px;margin:4px 6px 0 0}.mf-chip button{border:0;background:none;color:var(--bad);font-size:16px;padding:0 2px}
@@ -3232,6 +3241,47 @@ function capacityCard(){
     h('div',{class:'bar'},h('i',{style:'width:'+pct+'%'})),
     h('p',{class:'small muted',style:'margin-top:8px'},'Ước tính dùng '+used.toLocaleString('vi-VN')+' trên '+cap.toLocaleString('vi-VN')+' tài liệu cho phép ('+n+' mẫu đang giữ trực tuyến, mỗi mẫu khoảng 3 tài liệu).'+(left!=null?' Theo tốc độ 14 ngày qua, còn khoảng '+left+' ngày.':'')+' Mẫu phát hành quá 90 ngày được chuyển sang lưu giữ ở trang Hồ sơ lưu trữ, tab Gói lưu giữ.'),arcDueCount()?h('a',{class:'btn sm primary',href:'#luu-tru',style:'margin-top:8px','data-act':'arc-due',onclick:()=>{arTab='pack';}},arcDueCount()+' kỳ đến hạn lưu giữ'):null);
 }
+/* ===== 0.27.6 Tổng quan: tiến độ từng thí nghiệm viên theo thời gian thực ===== */
+function mfProg(s){
+  const d=s.ban_nhap;if(!d||typeof d!=='object')return null;
+  try{const G=gt(s);let tot,need;
+    if(G){tot=G.total(d);need=G.need(d);}
+    else if(loaiOf(s)==='DA_5_20'){const K=Object.keys(MF_MAP_DA);tot=K.length;need=K.filter(k=>typeof d[k]!=='number').length;}
+    else{tot=MF_KEYS.length;need=MF_KEYS.filter(k=>typeof d[k]!=='number').length;}
+    return tot?Math.max(0,Math.min(100,Math.round((tot-need)/tot*100))):null;}catch(e){return null;}}
+function agoText(iso){if(!iso)return'';const m=Math.floor((Date.now()-new Date(iso).getTime())/60000);if(isNaN(m))return'';if(m<1)return'vừa xong';if(m<60)return m+' phút trước';const hh=Math.floor(m/60);if(hh<24)return hh+' giờ trước';return Math.floor(hh/24)+' ngày trước';}
+function techStats(a){
+  const today=todayISO(),since=new Date(Date.now()-30*864e5).toISOString(),mine=S.samples.filter(x=>x.giao&&x.giao.ma_nv===a.id);
+  const c=k=>mine.filter(x=>x.status===k);
+  const open=mine.filter(x=>['da_giao','dang_thu','tra_lai'].includes(x.status)).sort((p,q)=>(p.han_tra||'9')<(q.han_tra||'9')?-1:1);
+  let last='';S.audit.forEach(x=>{if(x.by===a.name&&(x.at||'')>last)last=x.at;});S.samples.forEach(x=>{if(x.last_by===a.name&&(x.last_at||'')>last)last=x.last_at;});
+  const issued=c('da_phat_hanh').filter(x=>(x.phat_hanh_at||x.last_at||'')>=since);
+  const late=mine.filter(x=>x.han_tra&&x.han_tra<today&&!['da_phat_hanh','tu_choi'].includes(x.status));
+  return{a,giao:c('da_giao').length,thu:c('dang_thu').length,lai:c('tra_lai').length,soat:c('cho_soat_xet').length,duyet:c('cho_phe_duyet').length,xong:issued.length,late:late.length,open,last,total:mine.length};}
+function teamCard(t){
+  const ini=t.a.name.split(' ').filter(Boolean).slice(-2).map(w=>w[0]).join('').toUpperCase(),mins=t.last?(Date.now()-new Date(t.last).getTime())/60000:1e9,on=mins<15?'1':mins<120?'2':'0';
+  const seg=[['giao',t.giao],['thu',t.thu],['lai',t.lai],['duyet',t.soat+t.duyet],['xong',t.xong]],sum=seg.reduce((x,y)=>x+y[1],0);
+  const chip=(tk,l,n)=>n?h('span',{'data-t':tk},l,h('b',null,n)):null;
+  return h('div',{class:'dash-tn','data-tn':t.a.id},
+    h('div',{class:'dash-tn-h'},h('div',{class:'dash-av','data-on':on},ini),h('div',{style:'min-width:0'},h('b',null,t.a.name),h('small',null,t.last?'Hoạt động '+agoText(t.last):'Chưa có hoạt động'))),
+    sum?h('div',{class:'dash-seg',title:'Phân bố mẫu được giao'},seg.filter(x=>x[1]).map(([k,n])=>h('i',{'data-t':k,style:'flex:'+n+' 1 0'}))):h('div',{class:'small muted'},'Chưa được giao mẫu nào.'),
+    h('div',{class:'dash-chips'},chip('giao','Mới giao ',t.giao),chip('thu','Đang thử ',t.thu),chip('lai','Trả lại ',t.lai),chip('duyet','Chờ duyệt ',t.soat+t.duyet),chip('xong','Phát hành 30 ngày ',t.xong),chip('late','Quá hạn ',t.late)),
+    t.open.length?h('div',null,t.open.slice(0,4).map(s=>{const pr=mfProg(s),late=s.han_tra&&s.han_tra<todayISO();
+      return h('div',{class:'dash-job','data-late':late?'1':'0'},h('span',null,code(s.ma_mau),' ',h('span',{class:'muted small'},(s.mau&&s.mau.ten)||matName(loaiOf(s)))),h('span',{class:'small when'},(ST[s.status]?ST[s.status][0]:'')+(s.han_tra?' · hạn '+fd(s.han_tra):'')),
+        pr!=null?h('div',{class:'mf-bar',title:'Số liệu đã nhập '+pr+' %'},h('i',{style:'width:'+pr+'%'})):null);}),
+      t.open.length>4?h('div',{class:'small muted',style:'padding-top:4px'},'và '+(t.open.length-4)+' mẫu khác'):null):h('div',{class:'small muted'},t.total?'Không còn mẫu đang thử.':''));
+}
+function dashTeam(){
+  const today=todayISO(),act=S.samples.filter(x=>!['da_phat_hanh','tu_choi'].includes(x.status)),late=S.samples.filter(x=>x.han_tra&&x.han_tra<today&&!['da_phat_hanh','tu_choi','cho_tiep_nhan'].includes(x.status));
+  const hn=S.samples.filter(x=>x.status==='da_phat_hanh'&&(x.phat_hanh_at||'').slice(0,10)===today).length,wait=S.samples.filter(x=>['cho_tiep_nhan','da_tiep_nhan'].includes(x.status)).length;
+  const team=TESTERS.map(techStats).sort((p,q)=>(q.thu+q.giao+q.lai)-(p.thu+p.giao+p.lai)||p.a.name.localeCompare(q.a.name,'vi'));
+  const kp=(n,l,tone)=>h('div',{'data-tone':tone||''},h('b',null,n),h('span',null,l));
+  return h('div',{class:'stack','data-dash':'team'},
+    h('div',{class:'dash-kpi'},kp(act.length,'Mẫu đang xử lý'),kp(wait,'Chờ tiếp nhận, giao việc',wait?'warn':''),kp(late.length,'Quá hạn trả kết quả',late.length?'bad':'ok'),kp(hn,'Phát hành hôm nay','ok')),
+    h('div',{class:'row',style:'justify-content:space-between;align-items:center'},h('h2',{style:'margin:0'},'Tiến độ thí nghiệm viên'),h('span',{class:'dash-live'},h('i'),'Cập nhật theo thời gian thực · '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}))),
+    h('div',{class:'dash-legend'},[['giao','Mới giao','#8A9BA1'],['thu','Đang thử','var(--warn)'],['lai','Trả lại','var(--bad)'],['duyet','Chờ soát xét, phê duyệt','var(--accent)'],['xong','Đã phát hành','var(--ok)']].map(([k,l,c])=>h('span',null,h('i',{style:'background:'+c}),l))),
+    h('div',{class:'dash-team'},team.map(teamCard)));
+}
 pages['tong-quan']={render(root){
   const cnt=Object.fromEntries(Object.keys(ST).map(k=>[k,S.samples.filter(s=>s.status===k).length]));
   const today=todayISO();
@@ -3244,6 +3294,7 @@ pages['tong-quan']={render(root){
       h('div',{class:'row'},(hasRole('tiepnhan')||hasRole('tp'))?h('a',{class:'btn primary',href:'#nhan-mau'},'Nhận mẫu đầu tiên'):null,h('a',{class:'btn',href:'#khach-hang'},'Mở cổng khách hàng')))));
   }
   root.append(h('div',{class:'pipe'},PIPE.map(k=>h('div',{class:'st','data-zero':cnt[k]?'0':'1','data-end':k==='da_phat_hanh'?'1':'0'},h('b',null,cnt[k]),h('span',null,PIPE_LABEL[k])))));
+  if(hasRole('tp')&&S.samples.length)root.append(dashTeam());
   root.append(h('div',{class:'grid2'},
     h('div',{class:'card'},h('div',{class:'card-h'},h('h2',null,'Việc của bạn'),tonePill(mine.length+' việc',mine.length?'warn':'ok')),
       mine.length?h('div',{class:'stack'},mine.map(w=>h('div',{class:'row',style:'justify-content:space-between'},h('div',null,code(w.s.ma_mau||w.s.ma_tra_cuu||'Yêu cầu mới'),' ',h('span',{class:'muted small'},w.what)),h('a',{class:'btn sm',href:'#'+w.page},'Mở')))):
