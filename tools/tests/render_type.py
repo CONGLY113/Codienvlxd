@@ -21,7 +21,7 @@ async def main():
         for code in codes:
             b=await page.evaluate("""async(code)=>{const P=window.__ptn,G=P.GT[code];
               const s={ma_mau:'M26.11.05.1',so_yc:'YC26.11.05.1',so_bao_cao:'BC26.11.08.3',giao:{ma_gv:'GV1'},khach:{ten:'Công ty TNHH Xây dựng Hoàng Long'},du_an:{cong_trinh:'Đường giao thông Đồng Hới - Lệ Thủy',hang_muc:'Nền đường',chu_dau_tu:'BQLDA',giam_sat:'TVGS ABC',thi_cong:'Công ty TNHH Xây dựng Hoàng Long',dia_chi:'Quảng Trị'},mau:{loai:code,ten:'Mẫu thử',nguon_goc:'Mỏ X',quy_cach:'Mẫu 15x15',ngay_nhan:'2026-11-05'},chi_tieu:[]};
-              const ph={};if(G)Object.keys(G.ph||{}).forEach(k=>{const v=G.ph[k];ph[k]=(typeof v==='string'&&v!==''&&!isNaN(+v.replace(',','.')))?+v.replace(',','.'):v;});const d=Object.assign({},ph, {d0:'2026-11-06',d1:'2026-11-07',tc:27,ha:60,tt:'',dv:[]});
+              const ph={};if(G)Object.keys(G.ph||{}).forEach(k=>{const v=G.ph[k];ph[k]=(typeof v==='string'&&v!==''&&!isNaN(+v.replace(',','.')))?+v.replace(',','.'):v;});const d=Object.assign({},G&&G.defaults||{},ph,{d0:'2026-11-06',d1:'2026-11-07',tc:27,ha:60,tt:'',dv:[]});
               const u8=await P.buildTemplate(s,{id:'NS001',name:'Nguyễn Văn A'},G?{d}:null,{bc:'BC26.11.08.3',hash:'h',url:'',at:'2026-11-08',qr:null});
               let o='';for(let i=0;i<u8.length;i+=8192)o+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(o)}""",code)
             open(OUT+'/'+code+'.xlsx','wb').write(base64.b64decode(b))

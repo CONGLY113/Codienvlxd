@@ -1282,7 +1282,7 @@ function nenSpec(bt){
   const map={mac:'B4',tuoi:'B5'};if(bt)map.canh='B6';for(let i=0;i<NEN_N;i++)map['f_'+i]='B'+(10+i);
   const fixed=bt?[['B11','Số chữ số thập phân cường độ',0],['B12','Số chữ số thập phân lực nén',1],['B13','Số chữ số thập phân % so với mác',1],['B14','Số viên tối thiểu',3],['B15','Ngưỡng cảnh báo viên lệch (%)',15]].concat([100,150,200,300].flatMap((c,i)=>[['B'+(19+i),'Bảng hệ số quy đổi: cạnh '+(i+1),c],['C'+(19+i),'Bảng hệ số quy đổi: hệ số tại cạnh '+c,ALPHA_BT[c]]]))
     :[['B11','Số chữ số thập phân cường độ',1],['B12','Số chữ số thập phân lực nén',1],['B13','Số chữ số thập phân % so với mác',1],['B14','Số viên tối thiểu',6],['B15','Ngưỡng cảnh báo viên lệch (%)',15],['B16','Diện tích mặt nén (mm²)',1600]];
-  const test={code:bt?'NB_01':'NV_01',name:bt?'Cường độ chịu nén bê tông':'Cường độ chịu nén mẫu vữa',std:bt?'TCVN 3118:93':'TCVN 3121-11:2003',unit,key:'tb'};
+  const test={code:bt?'NB_01':'NV_01',name:bt?'Cường độ chịu nén bê tông':'Cường độ chịu nén mẫu vữa',std:bt?'TCVN 3118:2022':'TCVN 3121-11:2003',unit,key:'tb'};
   const dp={tb:udp,pct:1,ftb:1,lech:1,n:0};
   const sizeKeys=i=>['f_'+i];
   const defN=NMIN,cnt=d=>Math.max(1,Math.min(NEN_N,d.n||defN));
@@ -2110,12 +2110,74 @@ PK_LAYOUT.DA_GOC=C=>{const {put,rmRows,rowH,addMerge,colNum}=C;
   blk('G25','H29',DB,{f:'IF(out_r="","",FIXED(out_r,dp_cd))'});
   rowH(22,22);rowH(23,32);rowH(24,18);
 };
+/* nén mẫu bê tông / vữa: bảng viên mẫu xếp theo cột (A..M, chỉ hiện đúng số viên), tiêu đề mới, số báo cáo nằm trên tiêu đề */
+const nenLayout=(C,bt)=>{const {put,rmRows,rowH,addMerge,delMerge,setCols,cellsOf,txt,rows,sample,form}=C;
+  const L=n=>String.fromCharCode(64+n),colOf=c=>(c.getAttribute('r').match(/^[A-Z]+/)||[''])[0];
+  const dN=bt?3:6;let n=dN;
+  if(form&&form.d){const d=form.d;n=Math.max(1,Math.min(9,+d.n||dN));for(let i=0;i<9;i++)if(typeof d['f_'+i]==='number')n=Math.max(n,i+1);}
+  const lc=4+n,LC=L(lc),unit=bt?'daN/cm²':'N/mm²';
+  const ln=r=>{const a=cellsOf(r).find(c=>colOf(c)==='A');return a?txt(a):'';};
+  const cOf=(r,col)=>{const c=cellsOf(r).find(x=>colOf(x)===col);return c?txt(c):'';};
+  const soBC=txt(cellsOf(5).find(c=>colOf(c)==='A')),lblNg=cOf(7,'E')||'Cấu kiện:',pp=cOf(16,'C')||(bt?'TCVN 3118:2022':'TCVN 3121-11:2003');
+  const strip=t=>/^=/.test(t)?{f:t.slice(1)}:{v:t};
+  /* cột: A..C nhãn, D đơn vị, E..M viên mẫu; tổng 90 */
+  const wv=Math.min(18,Math.floor((90-36)/n*100)/100),spec=[{w:6},{w:10},{w:10},{w:10}];
+  for(let i=0;i<9;i++)spec.push({w:wv,hidden:i>=n});
+  setCols(spec);C.lastCol='M';
+  rmRows(4,39);for(let r=4;r<=39;r++){if(rows[r])rows[r].removeAttribute('hidden');}
+  ['A42:H42'].forEach(m=>{delMerge(m);addMerge('A42:'+LC+'42');});
+  const blk=(a,b,o,v)=>{const q1=/^([A-Z]+)(\d+)$/.exec(a),q2=/^([A-Z]+)(\d+)$/.exec(b);
+    for(let r=+q1[2];r<=+q2[2];r++)for(let c=C.colNum(q1[1]);c<=C.colNum(q2[1]);c++){const ref=L(c)+r,first=ref===a;
+      if(first&&v!=null&&typeof v==='object'&&v.f!=null)put(ref,{f:v.f,s:o});else put(ref,{v:first?v:'',s:o});}
+    if(a!==b)addMerge(a+':'+b);};
+  /* tiêu đề */
+  blk('A4','M4',{al:'left',wrap:false},strip(soBC).v!=null?strip(soBC).v:{f:strip(soBC).f});rowH(4,18);
+  blk('A5',LC+'5',{b:1,sz:14},bt?'THÍ NGHIỆM XÁC ĐỊNH CƯỜNG ĐỘ CHỊU NÉN BÊ TÔNG':'THÍ NGHIỆM XÁC ĐỊNH CƯỜNG ĐỘ CHỊU NÉN MẪU VỮA');rowH(5,30);rowH(6,6);
+  /* các dòng thông tin */
+  const da=sample.du_an||{},gv=sample.giao&&sample.giao.ma_gv;
+  const hdr=[['Tên mẫu:','in_ten_mau',''],[lblNg,'in_nguon_goc',''],['Công trình:','in_cong_trinh',da.cong_trinh],['Hạng mục:','in_hang_muc',da.hang_muc],['Chủ đầu tư:','in_chu_dau_tu',da.chu_dau_tu],
+    ['Đơn vị giám sát:','in_don_vi_giam_sat',da.giam_sat],['Đơn vị thi công:','in_don_vi_thi_cong',da.thi_cong],['Địa chỉ:','in_dia_chi',da.dia_chi],['Căn cứ thử nghiệm:','in_can_cu',gv?'Căn cứ phiếu yêu cầu và giao nhiệm vụ thử nghiệm '+gv:'']];
+  const cpl=Math.max(30,Math.floor((26+4+n*wv-26)*0.95));
+  const hh=len=>{const k=Math.max(1,Math.ceil((len||0)/cpl));return k<=1?15:Math.round(13.5*k+3);};
+  hdr.forEach((x,i)=>{const r=7+i;put('A'+r,{v:x[0],s:{al:'left',wrap:false}});blk('D'+r,LC+r,{al:'left'},{f:'IF('+x[1]+'="","",'+x[1]+')'});
+    rowH(r,hh(String(x[2]||'').length));if(x[0]==='Hạng mục:'&&!String(x[2]||'').trim())rows[r].setAttribute('hidden','1');});
+  put('A16',{v:'Quy cách mẫu:',s:{al:'left',wrap:false}});
+  blk('D16',LC+'16',{al:'left'},bt?{f:'IF(ISNUMBER(So_lieu!B6),"Mẫu có kích thước "&So_lieu!B6/10&"x"&So_lieu!B6/10&"x"&So_lieu!B6/10&" cm","")'}:PK_QC);rowH(16,15);
+  put('A17',{v:'Mác thiết kế:',s:{al:'left',wrap:false}});
+  blk('D17',LC+'17',{al:'left'},{f:bt?'IF(ISNUMBER(in_mac),FIXED(in_mac,0,TRUE)&" daN/cm²   (Tính theo mẫu chuẩn)","")':'IF(ISNUMBER(in_mac),FIXED(in_mac,1,TRUE)&" N/mm²   ("&FIXED(in_mac*10,0,TRUE)&" daN/cm²)","")'});rowH(17,15);
+  put('A18',{v:'Phương pháp thử:',s:{al:'left',wrap:false}});blk('D18',LC+'18',{al:'left'},pp);rowH(18,15);rowH(19,8);
+  /* bảng kết quả */
+  const T={bd:'lrtb',al:'left'},TC={bd:'lrtb'},TU={bd:'lrtb'},TI={bd:'lrtb',i:1};
+  const lab=(r,t,u)=>{if(u){blk('A'+r,'C'+r,T,t);put('D'+r,{v:u,s:TU});}else blk('A'+r,'D'+r,T,t);};
+  const val=(r,o,v)=>blk('E'+r,LC+r,Object.assign({},TC,o||{}),v);
+  lab(20,'Ký hiệu mẫu:');val(20,null,'');
+  lab(21,'Ngày lấy mẫu:');val(21,null,{f:'IF(OR(in_ngay_bat_dau="",NOT(ISNUMBER(in_tuoi))),"",TEXT(in_ngay_bat_dau-in_tuoi,"dd/mm/yyyy"))'});
+  lab(22,'Ngày thử:');val(22,null,{f:'IF(in_ngay_bat_dau="","",TEXT(in_ngay_bat_dau,"dd/mm/yyyy")&IF(in_ngay_ket_thuc="",""," - "&TEXT(in_ngay_ket_thuc,"dd/mm/yyyy")))'});
+  lab(23,'Tuổi mẫu:','(ngày)');val(23,null,{f:'IF(ISNUMBER(in_tuoi),in_tuoi,"")'});
+  lab(24,bt?'Kích thước mẫu lập phương:':'Kích thước mẫu:');
+  val(24,null,bt?{f:'IF(ISNUMBER(So_lieu!B6),So_lieu!B6&" x "&So_lieu!B6&" x "&So_lieu!B6&" mm","")'}:{f:'IF(So_lieu!B7="","",SUBSTITUTE(So_lieu!B7," (mm)","(mm)"))'});
+  lab(25,'Viên mẫu:');
+  lab(26,'Lực nén mẫu:','(kN)');lab(27,'Cường độ nén mẫu:','('+unit+')');lab(28,'Cường độ trung bình:','('+unit+')');
+  for(let i=0;i<n;i++){const c=L(5+i),q=10+i;
+    put(c+'25',{v:'Viên '+(i+1),s:TI});
+    put(c+'26',{f:'IF(So_lieu!B'+q+'="","",FIXED(So_lieu!B'+q+',dp_f,TRUE))',s:TC});
+    put(c+'27',{f:'IF(So_lieu!C'+q+'="","",FIXED(So_lieu!C'+q+',dp_r,TRUE))',s:TC});}
+  val(28,{b:1},{f:'IF(out_n=0,"",FIXED(out_tb,dp_r,TRUE))'});
+  for(let r=20;r<=28;r++)rowH(r,r===25?20:22);
+  for(let r=29;r<=36;r++)rowH(r,3);rowH(37,8);
+  /* nhận xét: ô C38 giữ nguyên tên vùng in_nhan_xet */
+  put('A38',{v:'Nhận xét:',s:{b:1,i:1,al:'left',va:'top',wrap:false}});
+  blk('C38',LC+'39',{al:'left',va:'top'},{f:'IF(out_pct="","","Cường độ nén đạt "&FIXED(out_pct,dp_p,TRUE)&" % so với mác thiết kế.")'});rowH(38,18);rowH(39,18);
+  /* ô tên người ký: G44:H44 -> G44:J44 (cột ẩn không chiếm chỗ) */
+  delMerge('G44:H44');addMerge('G44:J44');
+};
+PK_LAYOUT.NEN_BT=C=>nenLayout(C,true);PK_LAYOUT.NEN_VUA=C=>nenLayout(C,false);
 /* chỉnh riêng theo loại mẫu: nofill = bỏ nền màu; hide = ẩn hàng theo nhãn cột A; drop = xóa ô nhãn và ô giá trị cùng hàng; rep = đổi chữ (tiêu chuẩn) ở Phieu_KQ và So_lieu */
 const PK_TYPE=(()=>{const xm={nofill:1,hide:['Phương pháp thử:'],rep:[['TCVN 4030:2003','TCVN 13605:2023']]},nh={hide:['Phương pháp thử:']},ln={nofill:1};
   return{XM_PCB30:xm,XM_PCB40:xm,DO_CS:{nofill:1,drop:['Khu vực đo:'],hide:['Ghi chú đo:']},
     DO_K_DV:{nofill:1,drop:['Đoạn, vị trí đo:'],rep:[['22 TCN 02:71','TCVN 12791:2020']]},DO_K_PR:{nofill:1,drop:['Đoạn, vị trí đo:']},
-    DA_LN_1:ln,DA_LN_2:ln,DA_LN_3:ln,NHUA_6070:nh,NHUA_MC70:nh,GACH_BT_DAC:nh,GACH_BT_RONG:nh};})();
-async function patchPhieuCommon(zip,sample,extra){
+    DA_LN_1:ln,DA_LN_2:ln,DA_LN_3:ln,NEN_BT:{rep:[['TCVN 3118:93','TCVN 3118:2022']]},NHUA_6070:nh,NHUA_MC70:nh,GACH_BT_DAC:nh,GACH_BT_RONG:nh};})();
+async function patchPhieuCommon(zip,sample,extra,form){
   const p='xl/worksheets/sheet4.xml',sf=zip.file(p);if(!sf)return;
   const P=new DOMParser(),doc=P.parseFromString(await sf.async('string'),'application/xml'),sd=doc.getElementsByTagName('sheetData')[0];if(!sd)return;
   const stF=zip.file('xl/styles.xml');if(!stF)return;
@@ -2178,7 +2240,10 @@ async function patchPhieuCommon(zip,sample,extra){
     if(mc)Array.from(mc.getElementsByTagName('mergeCell')).forEach(m=>{const q=/^[A-Z]+(\d+):[A-Z]+(\d+)$/.exec(m.getAttribute('ref')||'');if(q&&+q[1]>=r1&&+q[2]<=r2)mc.removeChild(m);});mcSync();};
   const rowH=(r,h)=>{const e=mkRow(r);e.setAttribute('ht',String(h));e.setAttribute('customHeight','1');};
   const grid=(r1,r2,c1,c2,o)=>{for(let r=r1;r<=r2;r++)for(let c=colNum(c1);c<=colNum(c2);c++){const L=String.fromCharCode(64+c);if(!cellsOf(r).some(x=>x.getAttribute('r')===L+r)||true){const e=cellEl(L+r);if(!e.getAttribute('s'))e.setAttribute('s',String(xf(o)));}}};
-  const CTX={doc,sd,rows,mkRow,cellsOf,txt,put,rmRows,rowH,addMerge,xf,grid,colNum,sample,extra};
+  const colsEl=doc.getElementsByTagName('cols')[0];
+  const setCols=spec=>{if(!colsEl)return;while(colsEl.firstChild)colsEl.removeChild(colsEl.firstChild);
+    spec.forEach((o,i)=>{const e=doc.createElementNS(NS_X,'col');e.setAttribute('min',String(i+1));e.setAttribute('max',String(i+1));e.setAttribute('width',String(o.w));e.setAttribute('customWidth','1');if(o.hidden)e.setAttribute('hidden','1');colsEl.appendChild(e);});};
+  const CTX={doc,sd,rows,mkRow,cellsOf,txt,put,rmRows,rowH,addMerge,delMerge,setCols,xf,grid,colNum,sample,extra,form,lastCol:''};
   /* 1. dòng đầu trang: bỏ tiêu đề, ngày thử, thiết bị, mã mẫu; quy cách; chữ thường */
   for(let r=1;r<=maxHead;r++){const cs=cellsOf(r);if(!cs.length)continue;const a=cs.find(c=>colOf(c)==='A'),ta=txt(a).trim();
     if(r<=6&&ta==='PHIẾU KẾT QUẢ THỬ NGHIỆM')rows[r].setAttribute('hidden','1');
@@ -2213,6 +2278,7 @@ async function patchPhieuCommon(zip,sample,extra){
       const n=newXf(s0,'nf',x=>{x.setAttribute('fillId','0');x.setAttribute('applyFill','1');});c.setAttribute('s',String(n));});
   }
   if(PK_LAYOUT[loaiOf(sample)])PK_LAYOUT[loaiOf(sample)](CTX);
+  if(CTX.lastCol){let w0=await zip.file('xl/workbook.xml').async('string');w0=w0.replace(/(Phieu_KQ['"]?!\$A\$1:\$)[A-Z]+(\$\d+)/,(m0,a,b)=>a+CTX.lastCol+b);zip.file('xl/workbook.xml',w0);}
   /* 4. trang in: lề 4,1 / 2,2 / 1,7 / 0,5 cm, tỷ lệ 100 % */
   let pm=doc.getElementsByTagName('pageMargins')[0];
   if(pm){pm.setAttribute('left','0.6693');pm.setAttribute('right','0.1969');pm.setAttribute('top','1.6142');pm.setAttribute('bottom','0.8661');pm.setAttribute('header','0.3');pm.setAttribute('footer','0.3');}
@@ -2335,7 +2401,7 @@ async function buildTemplate(sample,tester,form,extra){
     else if(f.sk&&f.sk.ops&&f.sk.ops.length){png=await skPng(f.sk);w=f.sk.w;h_=f.sk.h;}
     else if(extra){const k0=skNew('ngang');png=await skPng(k0,'Chưa có sơ đồ vị trí các điểm đo');w=k0.w;h_=k0.h;}
     if(png)await skEmbed(zip,png,w,h_);}
-  await patchPhieuCommon(zip,sample,extra);
+  await patchPhieuCommon(zip,sample,extra,form);
   if(extra)await issuedParts(zip,extra);
   let wbx=await zip.file('xl/workbook.xml').async('string');
   wbx=wbx.replace(/<calcPr([^>]*?)\/>/,(x,a)=>'<calcPr'+a.replace(/\s*fullCalcOnLoad="[^"]*"/,'')+' fullCalcOnLoad="1"/>');

@@ -27,7 +27,7 @@ async def main():
             const mk=async extra=>{const u8=await P.buildTemplate(s,{id:'NS001',name:'A'},null,extra);const z=await JSZip.loadAsync(u8);const x=await z.file('xl/worksheets/sheet4.xml').async('string');return x;};
             const x=await mk({bc:'BC26.11.08.3',hash:'h',url:'',at:'2026-11-08',qr:null}),y=await mk(null);const u9=await P.buildTemplate(s,{id:'NS001',name:'A'},null,null),z9=await JSZip.loadAsync(u9),sl=await z9.file('xl/worksheets/sheet2.xml').async('string');
             out[code]={dv:/showInputMessage="1"[^>]*prompt="[^"]*Nhập/.test(sl),m:/<pageMargins[^>]*>/.exec(x)[0],ps:/<pageSetup[^>]*>/.exec(x)[0],fit:/fitToPage/.test(x),
-              a5:/<c r="A5"[^>]*>[\\s\\S]*?<\\/c>/.exec(x)[0],date:/Quảng Trị, ngày 08 tháng 11 năm 2026/.test(x),dateDraft:/Quảng Trị, ngày\\s+tháng\\s+năm/.test(y),
+              a5:/<c r="A5"[^>]*>[\\s\\S]*?<\\/c>/.exec(x)[0],a4:/<c r="A4"[^>]*>[\\s\\S]*?<\\/c>/.exec(x)[0],date:/Quảng Trị, ngày 08 tháng 11 năm 2026/.test(x),dateDraft:/Quảng Trị, ngày\\s+tháng\\s+năm/.test(y),
               sp:/<row r="\\d+" ht="65" customHeight="1"/.test(x),tit:/PHIẾU KẾT QUẢ THỬ NGHIỆM/.test(x)&&!/<row r="4"[^>]*hidden="1"/.test(x),
               ctt:/Cán bộ thử nghiệm/.test(x),trpt:/Trưởng phòng TN/.test(x),qc:x.includes('Mẫu do đơn vị thi công và tư vấn giám sát lấy'),a5d:/<c r="A5"[^>]*>[\\s\\S]*?<\\/c>/.exec(y)[0]};
           }return out}""")
@@ -35,7 +35,7 @@ async def main():
         for c,o in res.items():
             chk('top="1.6142"' in o['m'] and 'bottom="0.8661"' in o['m'] and 'left="0.6693"' in o['m'] and 'right="0.1969"' in o['m'],c+' lề '+o['m'])
             chk('scale="100"' in o['ps'] and not o['fit'] and 'fitToWidth' not in o['ps'],c+' scale '+o['ps'])
-            chk('Số báo cáo: BC26.11.08.3' in o['a5'],c+' a5 '+o['a5'][:120])
+            chk('Số báo cáo: BC26.11.08.3' in (o['a4'] if c in ('NEN_BT','NEN_VUA') else o['a5']),c+' a5 '+o['a5'][:120])
             chk(o['date'],c+' dòng ngày');chk(o['dateDraft'],c+' dòng ngày bản nháp')
             chk(o['dv'],c+' gợi ý giá trị đo So_lieu')
             chk(o['sp'],c+' hàng cách 65');chk(not o['tit'],c+' tiêu đề còn hiển thị')
