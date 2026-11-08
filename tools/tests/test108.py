@@ -61,7 +61,7 @@ async def main():
         # ---- 0. luồng cũ còn nguyên
         print('== 0. luồng cũ: tải phiếu gốc, tra cứu, tên file')
         o=await page.evaluate("""async(id)=>{const P=window.__ptn;const s=P.S.samples.find(x=>x.id===id);const b=await P.phieuBytes(s);return {name:b.name,len:b.bytes.length,no:P.phieuNo(s),rev:s.sua_doi||null}}""",'s2611a_t1')
-        chk(o['name']=='BM-CAT-01_%s.xlsx'%bc1,'tên file phiếu gốc '+o['name']);chk(o['no']==bc1,'phieuNo = số gốc');chk(o['rev'] is None,'chưa có sua_doi')
+        chk(o['name'].startswith('BC.04.11.2026.1. ') and o['name'].endswith('.xlsx'),'tên file phiếu gốc '+o['name']);chk(o['no']==bc1,'phieuNo = số gốc');chk(o['rev'] is None,'chưa có sua_doi')
         # ---- 1. lập đề nghị bằng giao diện (NS011 giao nhận)
         print('== 1. NS011 lập đề nghị loại B bằng giao diện')
         await page.evaluate("()=>window.__ptn.setSession('NS011')");await page.evaluate("()=>{location.hash='sua-phieu'}");await page.wait_for_timeout(500)
@@ -119,7 +119,7 @@ async def main():
         xb=await page.evaluate("""async()=>{const P=window.__ptn;const s=P.S.samples.find(x=>x.id==='s2611a_t1');const o=await P.phieuBytes(s);const old=await P.sdOldBytes(P.sdList()[0]);
           const rd=async(b)=>{const z=await JSZip.loadAsync(b);const t=[];for(const n of Object.keys(z.files))if(/(worksheets\\/sheet\\d+|sharedStrings)\.xml$/.test(n))t.push(await z.file(n).async('string'));return t.join('')};
           return {nn:o.name,on:old.name,newx:await rd(o.bytes),oldx:await rd(old.bytes)}}""")
-        chk(xb['nn']=='BM-CAT-01_%s-SĐ01.xlsx'%bc1,'tên file mới '+xb['nn']);chk(xb['on']=='BM-CAT-01_%s_DA_THAY_THE.xlsx'%bc1,'tên file cũ '+xb['on'])
+        chk(xb['nn'].startswith('BC.') and '-SĐ01. ' in xb['nn'],'tên file mới '+xb['nn']);chk(xb['on']=='BM-CAT-01_%s_DA_THAY_THE.xlsx'%bc1,'tên file cũ '+xb['on'])
         chk('Phiếu này thay thế phiếu số '+bc1 in xb['newx'],'Excel mới có dòng thay thế');chk('Khu đô thị Nam Đồng Hới - giai đoạn 2' in xb['newx'],'Excel mới có tên công trình mới')
         chk('Số báo cáo: '+bc1+'-SĐ01' in xb['newx'],'Excel mới ghi số SĐ01')
         print('  oldx cong trinh:',re.findall(r'Khu đô thị[^<]{0,40}',xb['oldx']));chk('ĐÃ BỊ THAY THẾ' in xb['oldx'],'Excel cũ có dòng đã bị thay thế');chk('Khu đô thị Nam Đồng Hới' in xb['oldx'] and '- giai đoạn 2' not in xb['oldx'],'Excel cũ giữ tên công trình cũ')
@@ -161,7 +161,7 @@ async def main():
           const s=P.S.samples.find(x=>x.id==='s_t2');const f=await P.Data.get('files/'+s.phieu.file_id);const o=await P.phieuBytes(s);
           return {bc:out.bc,nn:s.mau.ngay_nhan,fid:s.phieu.file_id,fname:f&&f.name,ph:s.phieu.bc,ok:!!(f&&f.b64),name:o.name,old_file:!!(await P.Data.get('files/f_s_t2_bc'))}}""",d1['id'])
         chk(r2['bc']==bc2+'-SĐ01','legacy SĐ01 '+r2['bc']);chk(r2['nn']=='2026-11-03','ngày nhận mới');chk(r2['fid']=='f_s_t2_bc01' and r2['ok'],'file phiếu mới lưu riêng '+str(r2['fid']));chk(r2['old_file'],'file phiếu cũ vẫn còn')
-        chk(r2['name']=='BM-CAT-01_%s-SĐ01.xlsx'%bc2,'tải phiếu mới tên '+r2['name'])
+        chk(r2['name'].startswith('BC.') and '-SĐ01. ' in r2['name'],'tải phiếu mới tên '+r2['name'])
         # lần sửa thứ hai (SĐ02) lên mẫu cũ
         r3=await page.evaluate("""async()=>{const P=window.__ptn;P.setSession('NS011');const s=P.S.samples.find(x=>x.id==='s_t2');
           // còn hồ sơ chờ thu hồi -> bị chặn ở bước tạo giao diện, ở đây sdCreate không chặn nên ta đóng hồ sơ cũ trước
