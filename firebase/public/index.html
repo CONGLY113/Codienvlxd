@@ -4194,7 +4194,7 @@ pages['giao-viec']={render(root){
     batchCard(todo),h('div',{class:'card'},h('div',{class:'card-h'},h('h2',null,'Chờ giao việc'),tonePill(todo.length+' mẫu',todo.length?'info':'neutral')),
       todo.length?h('div',{class:'tbl-wrap'},h('table',null,h('thead',null,h('tr',null,['Mã mẫu','Công trình','Tên mẫu','Hạn trả',''].map(x=>h('th',null,x)))),h('tbody',null,todo.map(s=>row(s,false))))):
         emptyState('Không có mẫu nào chờ giao','Mẫu đã tiếp nhận sẽ hiện ở đây.')),
-    given.length?h('div',{class:'card'},h('h2',null,'Đã giao, chưa tải biểu mẫu'),h('div',{class:'tbl-wrap'},h('table',null,h('thead',null,h('tr',null,['Mã mẫu','Công trình','Tên mẫu','Hạn trả','Người được giao',''].map(x=>h('th',null,x)))),h('tbody',null,given.map(s=>row(s,true)))))):null,
+    given.length?h('div',{class:'card'},h('h2',null,'Đã giao, chưa tải biểu mẫu'),h('div',{class:'tbl-wrap'},h('table',null,h('thead',null,h('tr',null,['Mã mẫu','Công trình','Tên mẫu','Hạn trả','Người được giao',''].map(x=>h('th',null,x)))),h('tbody',null,given.map(s=>row(s,true)))))):'',
     h('div',{class:'card'},h('h2',null,'Khối lượng việc theo cán bộ'),h('div',{class:'stack'},TESTERS.map(a=>{const n=load(a.id);return h('div',{class:'row',style:'flex-wrap:nowrap'},h('span',{style:'width:160px;flex:none'},a.name),h('div',{class:'bar',style:'flex:1'},h('i',{style:'width:'+Math.min(100,n*25)+'%'})),h('span',{class:'num',style:'width:60px;text-align:right'},n+' việc'));}))));
 },update(){render();}};
 
