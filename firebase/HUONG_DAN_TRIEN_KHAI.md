@@ -196,3 +196,10 @@ Sau khi sửa file, chạy: `firebase deploy --only hosting,firestore:rules`.
 ## Bản 0.27.5: phân quyền Phó giám đốc
 
 NS018 Phan Thanh Giàn có vai trò riêng chỉ xem thanh toán: thấy Bảng kê và báo giá của ba phòng (bảng kê, công nợ, tổng hợp thanh toán) và mục Thanh toán của Cơ điện; không có Soát xét phê duyệt, Sửa đổi phiếu, Thiết bị, Hồ sơ lưu trữ và không ký duyệt bảng kê. Không đổi Firestore: chỉ deploy lại hosting. Phân quyền này chặn ở giao diện, còn `firestore.rules` vẫn cho mọi nhân viên đọc ghi.
+
+## Bản 0.28.2: bổ sung và tối ưu nhiều người dùng
+Không đổi Firestore: chỉ deploy lại hosting (`firebase deploy --only hosting`).
+- Nhận mẫu thủ công: thêm ô tìm khách hàng và ô tìm công trình (gõ không dấu cũng được).
+- Nhiệm vụ của tôi (cán bộ thử nghiệm): phiếu đã phê duyệt có nút «Tải phiếu A4 excel» cạnh Số báo cáo.
+- Tối ưu khi 8 người dùng chung: gom lần vẽ lại trang, không mất chữ đang gõ khi người khác cập nhật dữ liệu, cấp số mã phản hồi nhanh hơn.
+
