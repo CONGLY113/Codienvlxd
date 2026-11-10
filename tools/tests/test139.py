@@ -22,7 +22,7 @@ async def main():
         await page.route('**/*',route);await page.add_init_script(FAKE)
         await page.goto('file://'+HTML)
         await page.wait_for_function('window.__ptn && window.__ptn.db === true',timeout=15000)
-        r=await page.evaluate("""()=>{const G=window.__ptn.GT&&window.__ptn.GT.NHUA_MC70;if(!G)return {noGT:1};
+        r=await page.evaluate("""()=>{const G=window.__ptn.GT&&window.__ptn.GT[window.CODE||'NHUA_MC70'];if(!G)return {noGT:1};
           const d={nh_t1:85.5,nh_t2:84.5,cc_K:101.3,cc_o1:45,cc_o2:46,nu_m1:100,nu_v1:0.1,nu_m2:100,nu_v2:0.12,ca_V:200,ca_c1:50,ca_c2:108,ca_c3:155,ca_c4:180,nt_K:2,nt_t1:22,nt_t2:23,kd_1:110,kd_2:108,kd_3:112,ht_m1:2,ht_b1:10,ht_c1:10.01,ht_m2:2,ht_b2:10,ht_c2:10.012,nh_tol:5};
           const rc=G.rc(d);return {n:rc.n,bad:rc.bad,rc:rc.v||rc,need:G.need(d),total:G.total(),valid:G.valid(d,rc),secs:G.sections(d).map(x=>x.live(d)&&x.live(d).slice(1,3).join('|')),warn:G.verify(Object.assign({},d,{nh_t1:80,nh_t2:90,nh_tol:5})).filter(x=>x.state==='warn').length,map:Object.keys(G.map).length,v:G.detail.calc(d).R}}""")
         print(json.dumps(r,ensure_ascii=False)[:900])

@@ -219,3 +219,7 @@ Phiếu KQ cấp phối bê tông dựng lại theo form CPBT. Chỉ đổi giao
 ## 0.28.7 (10/11/2026)
 - Cập nhật cả `public/index.html` và `public/fb-shim.js` (shim có thêm incr/setOnce cho cấp số đồng thời). Triển khai: `firebase deploy --only hosting` (không đổi firestore.rules).
 - Sau khi triển khai nhấn Ctrl+F5 (hoặc mở lại ứng dụng hai lần) để service worker lấy bản mới.
+
+## 0.28.8 (10/11/2026)
+- Nhựa đường lỏng MC70 và nhựa đường đặc 60/70 nhập từng lần đo (biểu mẫu Excel So_lieu mới, mã phiên bản biểu mẫu không đổi). Chỉ đổi `public/index.html`; không đổi `fb-shim.js`, `firestore.rules`. Triển khai: `firebase deploy --only hosting`.
+- Sau khi triển khai nhấn Ctrl+F5 (hoặc mở lại ứng dụng hai lần) để service worker lấy bản mới. Mẫu nhựa đã tạo trước đó dùng file Excel cũ cần tải lại biểu mẫu mới.

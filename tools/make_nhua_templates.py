@@ -133,6 +133,7 @@ def resolve(S,start):
             for col,(kind,v) in rw['c'].items():
                 if kind in 'cdr':
                     v=v.replace('{r}',str(rr)).replace('{p}',str(p)).replace('{a}',str(a)).replace('{b}',str(b)).replace('{q}',str(q))
+                    for kk,vv in enumerate(results): v=v.replace('{R%d}'%kk,vv)
                     if kind=='r': results.append(col+str(rr))
                 if kind=='i' and v: mp[v]=col+str(rr)
                 cells[col]=(kind,v)
@@ -175,7 +176,13 @@ if __name__=='__main__':
         dps=['nh','cc','nu','c225','c260','c316','cn','nt','kd','ht']
         return [(5+k,'IF(%s="","",ROUND(%s,dp_%s))'%(c,c,dps[k])) for k,c in enumerate(cells)]
     out={}
-    mp,res=run('NHUA_MC70',mc70(),rm_mc70);out['NHUA_MC70']=mp
+    old={}
+    if 'const NHUA_MAP=' in s:
+        a=s.index('const NHUA_MAP=')+len('const NHUA_MAP=');old=json.loads(s[a:s.index(';\n',a)])
+    z0=zipfile.ZipFile(io.BytesIO(base64.b64decode(D['NHUA_MC70'])))
+    if b'<c r="B5" s="102" t="n"></c>' in z0.read('xl/worksheets/sheet2.xml'):
+        mp,res=run('NHUA_MC70',mc70(),rm_mc70);out['NHUA_MC70']=mp
+    else: out['NHUA_MC70']=old['NHUA_MC70']
     try:
         import make_nhua_6070 as m6
         mp2,res2=m6.run(sys.modules[__name__]);out['NHUA_6070']=mp2
