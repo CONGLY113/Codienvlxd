@@ -105,7 +105,7 @@ async def main():
         open('/tmp/w/xm_edit.xlsx','wb').write(ed)
         row=page.locator('.tbl-wrap tbody tr',has_text='Xi măng PCB40')
         async with page.expect_file_chooser() as fc:
-            await row.locator('button',has_text='Nạp bản chỉnh').click()
+            await row.locator('button',has_text='Nạp bản đầy đủ').click()
         await (await fc.value).set_files('/tmp/w/xm_edit.xlsx')
         await page.wait_for_selector('.modal h3',timeout=8000)
         t=await page.inner_text('.modal')
@@ -139,7 +139,7 @@ async def main():
         # bản 2 rồi khôi phục bản 1
         ed2=edit_xlsx(ed,widen);open('/tmp/w/xm_edit2.xlsx','wb').write(ed2)
         async with page.expect_file_chooser() as fc:
-            await page.locator('.tbl-wrap tbody tr',has_text='Xi măng PCB40').locator('button',has_text='Nạp bản chỉnh').click()
+            await page.locator('.tbl-wrap tbody tr',has_text='Xi măng PCB40').locator('button',has_text='Nạp bản đầy đủ').click()
         await (await fc.value).set_files('/tmp/w/xm_edit2.xlsx')
         await page.wait_for_selector('#mau-note',timeout=8000);await page.fill('#mau-note','Mở rộng thêm lần hai');await page.click('.modal button.primary');await page.wait_for_timeout(900)
         r2=await page.evaluate("()=>window.__ptn.mauOv('XM_PCB40').rev")

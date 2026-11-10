@@ -223,3 +223,11 @@ Phiếu KQ cấp phối bê tông dựng lại theo form CPBT. Chỉ đổi giao
 ## 0.28.8 (10/11/2026)
 - Nhựa đường lỏng MC70 và nhựa đường đặc 60/70 nhập từng lần đo (biểu mẫu Excel So_lieu mới, mã phiên bản biểu mẫu không đổi). Chỉ đổi `public/index.html`; không đổi `fb-shim.js`, `firestore.rules`. Triển khai: `firebase deploy --only hosting`.
 - Sau khi triển khai nhấn Ctrl+F5 (hoặc mở lại ứng dụng hai lần) để service worker lấy bản mới. Mẫu nhựa đã tạo trước đó dùng file Excel cũ cần tải lại biểu mẫu mới.
+
+## 0.28.9 (10/11/2026)
+- Chỉ đổi `public/index.html`; không đổi `fb-shim.js`, `firestore.rules`, không cần tạo chỉ mục mới. Triển khai: `firebase deploy --only hosting`. Sau khi triển khai nhấn Ctrl+F5 (hoặc mở lại ứng dụng hai lần) để service worker lấy bản mới.
+- Biểu mẫu gốc: các nút tải trong tab Biểu mẫu báo cáo nay tải đúng file phiếu hệ thống đang sinh (có số liệu minh họa), không còn lệch với file lúc sinh số báo cáo.
+- Bố cục in chung: tải file báo cáo hoặc file mẫu, chỉnh lề, độ rộng cột, chiều cao hàng, biểu đồ, ngắt trang trên Excel, rồi «Nạp bố cục in» ở đúng loại mẫu. Áp cho mọi phiếu loại đó, kể cả phiếu đã phát hành khi xem và tải; số liệu, công thức không đổi. Dữ liệu lưu ở `config/layf_<mã loại>`, `mauh`, `mauv`, nằm trong luật ghi hiện có của nhân viên.
+- Màn xem phiếu trên web có khung giấy A4, vạch ngắt trang, cảnh báo tràn lề phải, chiều cao hàng cố định như Excel, biểu đồ đọc thêm đường lưới, trục, chú giải, vị trí tùy chỉnh.
+- Liên kết nguồn: cấp phối bê tông, cấp phối vữa nhận cát, đá, xi măng cùng công trình và cùng phiếu yêu cầu; đo K, đầm chặt cùng công trình. Một nguồn hợp lệ thì tự liên kết; có hộp xác nhận nguồn.
+- Lưu ý: người tra cứu bằng mã QR (chưa đăng nhập) không đọc được cấu hình nên thấy bố cục hệ thống mặc định; nhân viên đăng nhập thấy bố cục đã nạp.
