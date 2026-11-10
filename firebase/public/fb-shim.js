@@ -61,6 +61,10 @@
         set:function(o){return w(function(){return F.setDoc(r,clean(o));});},
         update:function(o){return w(function(){return F.setDoc(r,clean(o),{merge:true});});},
         'delete':function(){return w(function(){return F.deleteDoc(r);});},
+        /* 0.28.7: tăng số đếm bằng giao dịch (cấp số thứ tự an toàn khi nhiều người cùng lúc): trả về số mới, không nhỏ hơn min+1 */
+        incr:function(min){return w(function(){return F.runTransaction(fs,function(tx){return tx.get(r).then(function(s){var n=s.exists()?(s.data().n||0):0;n=Math.max(n,min||0)+1;tx.set(r,{n:n});return n;});});});},
+        /* tạo tài liệu nếu chưa có; nếu đã có thì trả về bản đang có (created:false) */
+        setOnce:function(o){return w(function(){return F.runTransaction(fs,function(tx){return tx.get(r).then(function(s){if(s.exists())return {created:false,data:s.data()};tx.set(r,clean(o));return {created:true,data:o};});});});},
         /* khóa ngắn hạn (cấp số thứ tự): giao dịch trên tài liệu locks/<đường dẫn> */
         acquire:function(o){var lr=F.doc(fs,'locks/'+path.replace(/\//g,'__'));var holder=(o&&o.holder)||'x',ttl=(o&&o.ttlMs)||4000;
           return w(function(){return F.runTransaction(fs,function(tx){return tx.get(lr).then(function(s){var now=Date.now(),d=s.exists()?s.data():null;

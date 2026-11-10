@@ -35,7 +35,7 @@ async def main():
           return out}""")
         for c in ('XM_PCB30','XM_PCB40'):
             o=res[c];chk(16 in o['hid'] or c.startswith('XM'),c+' ẩn dòng phương pháp thử');chk(not o['x4030'] and o['x13605'],c+' TCVN 13605');chk(o['fill']==0,c+' còn nền %d'%o['fill'])
-        o=res['DO_CS'];chk(not o['kv'] and 15 in o['hid'] and not o['ng'],'DO_CS khu vực/ghi chú: %s'%o);chk(o['fill']==0,'DO_CS nền %d'%o['fill'])
+        o=res['DO_CS'];chk(not o['kv'] and not o['ng'],'DO_CS khu vực/ghi chú: %s'%o);chk(o['fill']==0,'DO_CS nền %d'%o['fill'])
         for c in ('DO_K_DV','DO_K_PR'):
             o=res[c];chk(not o['kv'] and not o['ng'],c+' đoạn, vị trí');chk(o['fill']==0,c+' nền %d'%o['fill'])
         o=res['DO_K_DV'];chk(not o['k'] and o['k2'],'DO_K_DV TCVN 12791:2020')

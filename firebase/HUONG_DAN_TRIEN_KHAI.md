@@ -215,3 +215,7 @@ Chỉ thay `public/index.html`. Phiếu xi măng và cát đổi bố cục theo
 
 ## 0.28.6 (10/11/2026)
 Phiếu KQ cấp phối bê tông dựng lại theo form CPBT. Chỉ đổi giao diện phiếu; chưa triển khai Firebase (chờ người dùng duyệt bản xem trước).
+
+## 0.28.7 (10/11/2026)
+- Cập nhật cả `public/index.html` và `public/fb-shim.js` (shim có thêm incr/setOnce cho cấp số đồng thời). Triển khai: `firebase deploy --only hosting` (không đổi firestore.rules).
+- Sau khi triển khai nhấn Ctrl+F5 (hoặc mở lại ứng dụng hai lần) để service worker lấy bản mới.
