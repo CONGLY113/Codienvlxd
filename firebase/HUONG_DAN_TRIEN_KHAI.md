@@ -209,3 +209,6 @@ Chỉ thay `public/index.html` rồi triển khai lại (firebase deploy --only 
 
 ## Bản 0.28.4
 Chỉ thay `public/index.html` rồi triển khai lại. Phiếu kết quả gạch 2 lỗ đổi bố cục theo form mới.
+
+## Bản 0.28.5
+Chỉ thay `public/index.html`. Phiếu xi măng và cát đổi bố cục theo form mới.

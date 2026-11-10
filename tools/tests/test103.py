@@ -151,12 +151,12 @@ async def main():
         def tot(x):return sum(float(m) for m in re.findall(r'<col\b[^>]*width="([\d.]+)"[^>]*min="[1-8]" max="[1-8]"',x))
         # 0.27.6: cột phiếu được co về tổng 90 ký tự để vừa A4 ở 100 %
         ex=(float(w(zo))+1.5)*90/(tot(zo)+1.5)
-        chk(abs(float(w(x))-ex)<0.05,'buildTemplate chưa dùng bản sửa: %s vs %s'%(w(x),ex))
+        chk(abs(float(w(x))-1.12)<0.05,'phiếu xi măng dùng bố cục mới (cột A 1,12): %s'%w(x))
         # loại khác không bị ảnh hưởng
         bt2=await page.evaluate("""async()=>{const P=window.__ptn;const s={ma_mau:'X2',so_yc:'Y',mau:{loai:'XM_PCB30',ten:'Xi măng'},du_an:{}};const u=await P.buildTemplate(s,{id:'NS004',name:'T'},null,null);return btoa(String.fromCharCode.apply(null,new Uint8Array(u)));}""")
         z2=zipfile.ZipFile(io.BytesIO(base64.b64decode(bt2))).read('xl/worksheets/sheet4.xml').decode()
         raw30=base64.b64decode([b for c,b in b64s if c=='XM_PCB30'][0]);z3=zipfile.ZipFile(io.BytesIO(raw30)).read('xl/worksheets/sheet4.xml').decode()
-        chk(abs(float(w(z2))-float(w(z3))*90/tot(z3))<0.05,'XM_PCB30 bị ảnh hưởng')
+        chk(abs(float(w(z2))-1.12)<0.05,'XM_PCB30 dùng bố cục mới')
         # lịch sử
         await page.locator('.tbl-wrap tbody tr',has_text='Xi măng PCB40').locator('button',has_text='Lịch sử').click();await page.wait_for_timeout(400)
         t=await page.inner_text('.modal')
