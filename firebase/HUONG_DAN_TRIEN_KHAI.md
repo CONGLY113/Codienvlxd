@@ -203,3 +203,6 @@ Không đổi Firestore: chỉ deploy lại hosting (`firebase deploy --only hos
 - Nhiệm vụ của tôi (cán bộ thử nghiệm): phiếu đã phê duyệt có nút «Tải phiếu A4 excel» cạnh Số báo cáo.
 - Tối ưu khi 8 người dùng chung: gom lần vẽ lại trang, không mất chữ đang gõ khi người khác cập nhật dữ liệu, cấp số mã phản hồi nhanh hơn.
 
+
+## Bản 0.28.3
+Chỉ thay `public/index.html` rồi triển khai lại (firebase deploy --only hosting). Không đổi quy tắc bảo mật hay dữ liệu. Nén bê tông/vữa: 100 dòng số liệu, phiếu theo biểu mẫu mới; Đo K: nhiều ngày đo trong một bảng, mỗi ngày một sheet phiếu.
