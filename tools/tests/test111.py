@@ -40,7 +40,7 @@ async def main():
         side=await L('.side').inner_text()
         chk('Phòng Hóa sinh môi trường' in side and 'Trưởng phòng' not in side and 'Giang Tấn Thông' in side,'thanh bên: tên phòng, chỉ tên người: %s'%side.replace('\n',' | ')[:160])
         nav=await ev("()=>[...document.querySelectorAll('.nav a')].map(a=>a.firstChild.textContent)")
-        chk(nav==['Tổng quan','Thông báo','Hồ sơ lưu trữ','Thanh toán và báo giá','Thiết bị'],'menu %s'%nav)
+        chk(nav==['Tổng quan','Hồ sơ lưu trữ','Thanh toán và báo giá','Thiết bị','Cài đặt'],'menu %s'%nav)
         # --- thiết bị riêng, không lẫn phòng VLXD
         await ev("()=>{location.hash='thiet-bi'}");await page.wait_for_timeout(500)
         chk(await L('table tbody tr').count()==0,'hóa sinh chưa có thiết bị (không lấy của VLXD)')

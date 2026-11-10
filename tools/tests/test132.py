@@ -65,7 +65,7 @@ async def main():
             exp=[(r['so'],['Km0+36','Km0+72','Km0+110'],['Km1+00','Km2+00']),(r['b2'],['Km1+00','Km1+20'],['Km0+36','Km2+00']),(r['b3'],['Km2+00','Km2+10','Km2+20','Km2+30'],['Km0+36','Km1+00'])]
             for i,(so,yes,no) in enumerate(exp):
                 t=T[i]
-                chk('Số báo cáo: '+so in t or so in t,loai+' sheet %d mang số %s'%(i+1,so))
+                chk(so in t,loai+' sheet %d mang số %s'%(i+1,so))
                 chk(all(y in t for y in yes) and not any(n in t for n in no),loai+' sheet %d chỉ có các điểm của nó'%(i+1))
             # K từng điểm khớp tính của hệ thống
             allrows=[a['r0']['rows']]+[m['rows'] for m in a['rm']]

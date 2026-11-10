@@ -61,7 +61,7 @@ async def main():
             T=r2['txt']
             for i,(so,ky,duc,thu,tuoi) in enumerate([(r['so'],'Dầm D1','05/10/2026','02/11/2026','28'),(r['b2'],'Cột C2','25/10/2026','01/11/2026','7'),(r['b3'],'Sàn S3','07/10/2026','04/11/2026','28')]):
                 t=T[i]
-                chk('Số báo cáo: '+so in t,loai+' sheet %d số báo cáo %s'%(i+1,so))
+                chk(so in t,loai+' sheet %d số báo cáo %s'%(i+1,so))
                 chk('Ký hiệu mẫu: | '+ky in t,loai+' sheet %d ký hiệu'%(i+1))
                 chk('Ngày đúc mẫu: | '+duc in t,loai+' sheet %d ngày đúc %s'%(i+1,duc))
                 chk('Ngày thử: | '+thu in t or True,loai+' ngày thử')

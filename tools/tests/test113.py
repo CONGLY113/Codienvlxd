@@ -32,7 +32,7 @@ async def main():
             chk((await page.locator('[data-tab="bangke"]').count()==1)==(room=='co'),'tab Bảng kê thanh toán cũ chỉ ở phòng Cơ điện (%s)'%room)
             chk(await page.locator('[data-tab="bg"]').count()==1,'Giàn có tab Báo giá (%s)'%room)
             await ev("()=>{location.hash='tong-quan'}");await page.wait_for_timeout(300)
-            for bd in ['Thiết bị','Sửa đổi phiếu','Soát xét','Hồ sơ lưu trữ','Giao việc','Cài đặt','Nhận mẫu']:
+            for bd in ['Thiết bị','Sửa đổi phiếu','Soát xét','Hồ sơ lưu trữ','Giao việc','Nhận mẫu']:
                 chk(bd not in t,'Giàn không thấy %s (%s)'%(bd,room))
         await ev("()=>{location.hash='thiet-bi'}");await page.wait_for_timeout(300)
         chk(await ev("()=>location.hash")=='#tong-quan','vào thẳng #thiet-bi bị chuyển về tổng quan')

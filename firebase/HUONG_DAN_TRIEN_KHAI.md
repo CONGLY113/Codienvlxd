@@ -235,3 +235,11 @@ Phiếu KQ cấp phối bê tông dựng lại theo form CPBT. Chỉ đổi giao
 ## 0.28.10 (11/11/2026)
 - Chỉ đổi `public/index.html`; không đổi `fb-shim.js`, `firestore.rules`. Triển khai: `firebase deploy --only hosting`, sau đó nhấn Ctrl+F5 (hoặc mở lại ứng dụng hai lần).
 - Phiếu kết quả Nén vữa, Đo K phễu rót cát, Đo K dao vòng dựng lại theo Thong_so_form (cột, hàng, nhãn, viền, chức danh ký). Phiếu đã phát hành vẫn giữ file cũ; phiếu sinh mới dùng bố cục mới. Công thức và số liệu không đổi.
+
+## 0.28.11 (11/11/2026)
+- Chỉ đổi `public/index.html`; không đổi `fb-shim.js`, `firestore.rules`. Triển khai: `firebase deploy --only hosting`, sau đó nhấn Ctrl+F5 (hoặc mở lại ứng dụng hai lần) để service worker lấy bản mới.
+- Nạp bố cục in: file Excel lưu lại có `printerSettings*.bin` không còn bị báo nhầm là có macro. Macro, liên kết ngoài, ActiveX thật vẫn bị chặn.
+- Biểu mẫu Đo K phễu rót cát và dao vòng mở trong Excel không còn báo «XML error» (sheet So_lieu đã đúng thứ tự phần tử). Tải lại 2 biểu mẫu từ tab Biểu mẫu để lấy file mới.
+- Ô số báo cáo góc trái trên mọi phiếu chỉ còn mã BC.YY.MM.DD.stt.
+- Tab: Thông báo nằm trong Cài đặt, Sửa đổi phiếu nằm trong Hồ sơ lưu trữ (chỉ đổi chỗ hiển thị).
+- Quy tắc chỉnh biểu mẫu: xem `docs/nhat-ky/NHAT_KY_BUILD_V0_28_11.md`.

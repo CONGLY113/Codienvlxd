@@ -35,7 +35,7 @@ async def main():
         for c,o in res.items():
             chk('top="1.6142"' in o['m'] and 'bottom="0.8661"' in o['m'] and 'left="0.6693"' in o['m'] and 'right="0.1969"' in o['m'],c+' lề '+o['m'])
             chk(('scale="85"' if c in ('CP_TN','CPDD_1','CPDD_2','DAM_CHAT_CAT') else 'scale="100"') in o['ps'] and not o['fit'] and 'fitToWidth' not in o['ps'],c+' scale '+o['ps'])
-            chk('Số báo cáo: BC26.11.08.3' in (o['a4'] if c in ('NEN_BT','NEN_VUA') else o['a5']),c+' a5 '+o['a5'][:120])
+            chk('BC26.11.08.3' in (o['a4'] if c in ('NEN_BT','NEN_VUA') else o['a5']),c+' a5 '+o['a5'][:120])
             chk(o['date'],c+' dòng ngày');chk(o['dateDraft'],c+' dòng ngày bản nháp')
             chk(o['dv'],c+' gợi ý giá trị đo So_lieu')
             chk(o['sp'],c+' hàng cách 65');chk(not o['tit'],c+' tiêu đề còn hiển thị')
