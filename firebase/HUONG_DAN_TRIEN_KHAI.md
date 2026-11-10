@@ -206,3 +206,6 @@ Không đổi Firestore: chỉ deploy lại hosting (`firebase deploy --only hos
 
 ## Bản 0.28.3
 Chỉ thay `public/index.html` rồi triển khai lại (firebase deploy --only hosting). Không đổi quy tắc bảo mật hay dữ liệu. Nén bê tông/vữa: 100 dòng số liệu, phiếu theo biểu mẫu mới; Đo K: nhiều ngày đo trong một bảng, mỗi ngày một sheet phiếu.
+
+## Bản 0.28.4
+Chỉ thay `public/index.html` rồi triển khai lại. Phiếu kết quả gạch 2 lỗ đổi bố cục theo form mới.
