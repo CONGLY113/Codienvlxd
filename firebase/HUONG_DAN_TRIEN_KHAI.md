@@ -212,3 +212,6 @@ Chỉ thay `public/index.html` rồi triển khai lại. Phiếu kết quả g�
 
 ## Bản 0.28.5
 Chỉ thay `public/index.html`. Phiếu xi măng và cát đổi bố cục theo form mới.
+
+## 0.28.6 (10/11/2026)
+Phiếu KQ cấp phối bê tông dựng lại theo form CPBT. Chỉ đổi giao diện phiếu; chưa triển khai Firebase (chờ người dùng duyệt bản xem trước).
