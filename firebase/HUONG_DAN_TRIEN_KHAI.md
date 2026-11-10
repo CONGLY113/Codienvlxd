@@ -231,3 +231,7 @@ Phiếu KQ cấp phối bê tông dựng lại theo form CPBT. Chỉ đổi giao
 - Màn xem phiếu trên web có khung giấy A4, vạch ngắt trang, cảnh báo tràn lề phải, chiều cao hàng cố định như Excel, biểu đồ đọc thêm đường lưới, trục, chú giải, vị trí tùy chỉnh.
 - Liên kết nguồn: cấp phối bê tông, cấp phối vữa nhận cát, đá, xi măng cùng công trình và cùng phiếu yêu cầu; đo K, đầm chặt cùng công trình. Một nguồn hợp lệ thì tự liên kết; có hộp xác nhận nguồn.
 - Lưu ý: người tra cứu bằng mã QR (chưa đăng nhập) không đọc được cấu hình nên thấy bố cục hệ thống mặc định; nhân viên đăng nhập thấy bố cục đã nạp.
+
+## 0.28.10 (11/11/2026)
+- Chỉ đổi `public/index.html`; không đổi `fb-shim.js`, `firestore.rules`. Triển khai: `firebase deploy --only hosting`, sau đó nhấn Ctrl+F5 (hoặc mở lại ứng dụng hai lần).
+- Phiếu kết quả Nén vữa, Đo K phễu rót cát, Đo K dao vòng dựng lại theo Thong_so_form (cột, hàng, nhãn, viền, chức danh ký). Phiếu đã phát hành vẫn giữ file cũ; phiếu sinh mới dùng bố cục mới. Công thức và số liệu không đổi.

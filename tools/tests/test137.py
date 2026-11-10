@@ -85,8 +85,8 @@ async def main():
                 tt=T[i]
                 chk('Số báo cáo: '+so in tt or so in tt,loai+' sheet %d mang số %s'%(i+1,so))
                 chk(all(y in tt for y in yes) and not any(n in tt for n in no),loai+' sheet %d chỉ có các điểm của nó'%(i+1))
-                chk('Ngày đo: | '+ngay in tt,loai+' sheet %d ghi ngày đo %s'%(i+1,ngay))
-                chk('Độ ẩm tốt nhất Wo' in tt,loai+' sheet %d có thông số'%(i+1))
+                chk('Ngày thử nghiệm: | '+ngay in tt,loai+' sheet %d ghi ngày đo %s'%(i+1,ngay))
+                chk('Độ ẩm tốt nhất (Wo)' in tt,loai+' sheet %d có thông số'%(i+1))
             allrows=[a['r0']['rows']]+[m['rows'] for m in a['rm']]
             for i,rows in enumerate(allrows):
                 for x in rows:
