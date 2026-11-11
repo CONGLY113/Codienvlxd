@@ -243,3 +243,8 @@ Phiếu KQ cấp phối bê tông dựng lại theo form CPBT. Chỉ đổi giao
 - Ô số báo cáo góc trái trên mọi phiếu chỉ còn mã BC.YY.MM.DD.stt.
 - Tab: Thông báo nằm trong Cài đặt, Sửa đổi phiếu nằm trong Hồ sơ lưu trữ (chỉ đổi chỗ hiển thị).
 - Quy tắc chỉnh biểu mẫu: xem `docs/nhat-ky/NHAT_KY_BUILD_V0_28_11.md`.
+
+## 0.37.0 (11/11/2026)
+- Chỉ đổi `public/index.html`; không đổi `fb-shim.js`, `firestore.rules`, không cần chỉ mục mới. Triển khai: `firebase deploy --only hosting`, sau đó nhấn Ctrl+F5 (hoặc mở lại ứng dụng hai lần) để service worker lấy bản mới.
+- Gộp các bản 0.29.0 đến 0.37.0: chốt dữ liệu chính thức (xóa dữ liệu chạy thử có sao lưu), giao diện đăng nhập và điều hướng mới, gạch bê tông đặc và rỗng, ba phiếu đá láng nhựa, loại mẫu mới vải địa kỹ thuật (32 loại mẫu). Chi tiết: `docs/nhat-ky/NHAT_KY_BUILD_V0_37_0.md`.
+- Trước khi dùng «Chốt dữ liệu chính thức» trên dữ liệu thật, đăng nhập bằng tài khoản trưởng phòng, sao lưu Excel và kiểm tra bản xem trước số bản ghi.

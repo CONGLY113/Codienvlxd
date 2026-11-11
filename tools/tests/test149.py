@@ -32,7 +32,7 @@ async def main():
         await page.goto('file://'+HTML)
         await page.wait_for_function('window.__ptn && window.__ptn.db === true',timeout=15000)
         codes=await page.evaluate("()=>window.__ptn.mauCodes2()")
-        chk(len(codes)==31,'31 loại mẫu')
+        chk(len(codes)>=32,'số loại mẫu (32 từ bản 0.37.0, có vải địa kỹ thuật)')
         res=await page.evaluate("""async()=>{const P=window.__ptn,out={};
           const toB=u8=>{let s='';for(let i=0;i<u8.length;i+=32768)s+=String.fromCharCode.apply(null,u8.subarray(i,i+32768));return btoa(s);};
           for(const c of P.mauCodes2()){const u8=await P.mauDemo(c);out[c]=toB(u8);}
